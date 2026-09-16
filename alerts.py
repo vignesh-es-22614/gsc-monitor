@@ -498,6 +498,12 @@ def main() -> None:
     p.add_argument("--token", default=None)
     p.add_argument("--no-email", action="store_true")
     p.add_argument(
+        "--force-email",
+        action="store_true",
+        help="Send the digest even when nothing breached a threshold, "
+             "overriding email.send_when_clean.",
+    )
+    p.add_argument(
         "--preview",
         metavar="PATH",
         help=(
@@ -585,7 +591,7 @@ def main() -> None:
 
     if args.no_email or not cfg["email"]["enabled"]:
         return
-    if not alerts and not cfg["email"]["send_when_clean"]:
+    if not alerts and not (cfg["email"]["send_when_clean"] or args.force_email):
         print("  clean -- no email sent (send_when_clean is false).")
         return
 

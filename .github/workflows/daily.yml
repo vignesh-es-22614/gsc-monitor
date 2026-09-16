@@ -114,15 +114,9 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
         run: |
-          if [ "${{ inputs.send_email }}" = "true" ]; then
-            python -c "
-import json
-p='alerts.config.json'
-c=json.load(open(p)); c['email']['send_when_clean']=True
-json.dump(c,open(p,'w'),indent=2)"
-          fi
           python alerts.py --out docs/data \
-            --url "${DASHBOARD_URL:-https://vignesh-es-22614.github.io/gsc-monitor/}"
+            --url "${DASHBOARD_URL:-https://vignesh-es-22614.github.io/gsc-monitor/}" \
+            ${{ inputs.send_email == true && '--force-email' || '' }}
 
       - name: Clean up credentials
         if: always()
