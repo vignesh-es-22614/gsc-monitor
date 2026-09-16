@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -128,8 +128,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.045em;color:var(--mut
   font-weight:600;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface);z-index:1}
 th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
 th[aria-sort]:after{content:"";margin-left:4px}
-th[aria-sort="descending"]:after{content:"▾"}
-th[aria-sort="ascending"]:after{content:"▴"}
+th[aria-sort="descending"]:after{content:"â–¾"}
+th[aria-sort="ascending"]:after{content:"â–´"}
 tbody tr:hover{background:var(--surface-2)}
 td.ent{max-width:min(900px,48vw);overflow:hidden;text-overflow:ellipsis}
 td.ent .sub{color:var(--muted);font-size:11px}
@@ -179,6 +179,8 @@ input::placeholder{color:var(--muted)}
 .chip:hover{color:var(--ink)}
 .chip.on{background:var(--s1);border-color:var(--s1);color:#fff}
 .chip.on span{color:rgba(255,255,255,.75)}
+.iconbtn.sm{padding:4px 9px;font-size:11.5px}
+.exgrid .pair #q_presets{display:flex;gap:4px}
 
 .empty{padding:26px 15px;color:var(--muted);font-size:13px;text-align:center}
 .banner{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
@@ -197,11 +199,11 @@ footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--border);
 <header class="top">
   <div class="brand">
     <h1>Search Console Monitor</h1>
-    <div class="sub" id="subtitle">Loading…</div>
+    <div class="sub" id="subtitle">Loadingâ€¦</div>
   </div>
   <div class="toolbar">
     <div class="seg" role="group" aria-label="Comparison window" id="winseg"></div>
-    <button class="iconbtn" id="themebtn" title="Toggle theme">◐ Theme</button>
+    <button class="iconbtn" id="themebtn" title="Toggle theme">â— Theme</button>
   </div>
 </header>
 
@@ -217,13 +219,13 @@ footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--border);
     </div>
     <p class="caveat" style="padding-left:2px">
       <b>manageengine.com</b> is a URL-prefix property that contains the product
-      properties listed under it. Their figures overlap — never add properties together.
+      properties listed under it. Their figures overlap â€” never add properties together.
     </p>
   </aside>
 
   <!-- ------------------------------------------------------ main region -->
   <main id="main">
-    <div class="spinner">Loading data…</div>
+    <div class="spinner">Loading dataâ€¦</div>
   </main>
 </div>
 
@@ -264,8 +266,8 @@ function applyFilter(rows, f){
   return out;
 }
 const $ = s => document.querySelector(s);
-const fmt = n => n==null ? '–' : n.toLocaleString('en-US');
-const fmt1 = n => n==null ? '–' : n.toFixed(1);
+const fmt = n => n==null ? 'â€“' : n.toLocaleString('en-US');
+const fmt1 = n => n==null ? 'â€“' : n.toFixed(1);
 const pctOf = (a,b) => (!b) ? null : (a-b)/b*100;
 
 function deltaHTML(cur, prev, opts={}){
@@ -274,7 +276,7 @@ function deltaHTML(cur, prev, opts={}){
   // Position is the one metric where a rising number is bad.
   const good = opts.lowerIsBetter ? d < 0 : d > 0;
   const cls = Math.abs(d) < 0.05 ? '' : (good ? 'up' : 'down');
-  const arrow = Math.abs(d) < 0.05 ? '' : (d>0 ? '↑' : '↓');
+  const arrow = Math.abs(d) < 0.05 ? '' : (d>0 ? 'â†‘' : 'â†“');
   return `<span class="delta ${cls}">${arrow}${Math.abs(d).toFixed(1)}%</span>`;
 }
 // Position is the one metric where the number and the outcome move opposite
@@ -282,11 +284,11 @@ function deltaHTML(cur, prev, opts={}){
 // ambiguous here whichever way it points, so show the signed change instead
 // and let colour carry good/bad.
 function posDelta(cur, prev, verbose){
-  if(cur==null||prev==null) return '<span style="color:var(--muted)">–</span>';
+  if(cur==null||prev==null) return '<span style="color:var(--muted)">â€“</span>';
   const d = cur - prev;                       // positive = ranking worse
   if(Math.abs(d) < 0.05) return '<span class="delta">0.0</span>';
   const word = verbose ? (d<0 ? ' better' : ' worse') : '';
-  return `<span class="delta ${d<0?'up':'down'}">${d>0?'+':'−'}${Math.abs(d).toFixed(1)}${word}</span>`;
+  return `<span class="delta ${d<0?'up':'down'}">${d>0?'+':'âˆ’'}${Math.abs(d).toFixed(1)}${word}</span>`;
 }
 const esc = s => String(s??'').replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -392,7 +394,7 @@ function healthList(el){
   el.innerHTML = `<div style="padding:2px 15px 14px">` + rows.map(p=>{
     const stale = p.days_behind > 2, gaps = p.missing_days > 0;
     const sev = stale ? 'critical' : gaps ? 'serious' : 'good';
-    const icon = stale ? '▲' : gaps ? '◆' : '●';
+    const icon = stale ? 'â–²' : gaps ? 'â—†' : 'â—';
     const word = stale ? `${p.days_behind}d behind`
                : gaps  ? `${p.missing_days} day${p.missing_days>1?'s':''} missing`
                : 'current';
@@ -416,28 +418,6 @@ function csvCell(v){
   const safe = /^[=+\-@]/.test(s) ? "'" + s : s;
   return /[",\n\r]/.test(safe) ? '"' + safe.replace(/"/g,'""') + '"' : safe;
 }
-function downloadCSV(){
-  const rows = S.exportRows || [], kind = S.exportKind || 'rows';
-  if(!rows.length) return;
-  const head = [kind==='pages'?'page':'query','clicks','clicks_prev','clicks_change_pct',
-    'impressions','impressions_prev','ctr','position','position_prev','position_change'];
-  const body = rows.map(r=>{
-    const d = pctOf(r.c, r.c0);
-    return [r.k, r.c, r.c0, d==null?'':d.toFixed(1), r.i, r.i0,
-      r.i ? (r.c/r.i) : '', r.p ?? '', r.p0 ?? '',
-      (r.p!=null && r.p0!=null) ? (r.p - r.p0).toFixed(1) : ''
-    ].map(csvCell).join(',');
-  });
-  // BOM so Excel opens UTF-8 queries correctly rather than as mojibake.
-  const blob = new Blob(['﻿' + head.join(',') + '\n' + body.join('\n')],
-    {type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `gsc_${S.propData.label.replace(/[^a-z0-9]+/gi,'-')}_${kind}_${S.win}d_${S.summary.latest_date}.csv`;
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 0);
-}
-
 // 7-day mean. Search Console traffic is strongly weekly; a raw daily line is
 // mostly weekday shape, which buries the trend the page exists to show.
 function smooth(pts, k=7){
@@ -463,11 +443,11 @@ function renderPropList(){
       const d=p.windows[w]||{};
       const dl=deltaHTML(d.clicks, d.clicks_prev);
       const stale = p.days_behind > 2
-        ? `<span style="color:var(--serious)" title="Behind the newest loaded date">⚠ ${p.days_behind}d</span>` : '';
+        ? `<span style="color:var(--serious)" title="Behind the newest loaded date">âš  ${p.days_behind}d</span>` : '';
       return `<button data-slug="${p.slug}" aria-current="${S.prop===p.slug}"
         aria-label="${esc(p.label)}, ${fmt(d.clicks)} clicks">
         <div class="pname">${esc(p.label)}${p.is_root?'<span class="rootbadge">CONTAINS OTHERS</span>':''}${
-          p.source==='search_console_api'?'<span class="rootbadge" title="Not in BigQuery yet — pulled live from the Search Console API">LIVE API</span>':''}</div>
+          p.source==='search_console_api'?'<span class="rootbadge" title="Not in BigQuery yet â€” pulled live from the Search Console API">LIVE API</span>':''}</div>
         <div class="pmeta"><span>${fmt(d.clicks)} clicks</span> ${dl} ${stale}</div>
       </button>`;
     }).join('');
@@ -485,15 +465,15 @@ function alertBanner(){
   if(!a){ el.innerHTML=''; return; }
   const c=a.counts.critical, w=a.counts.warning;
   if(!c && !w){
-    el.innerHTML = `<div class="banner"><span style="color:var(--good)">●</span>
+    el.innerHTML = `<div class="banner"><span style="color:var(--good)">â—</span>
       <div><b>All clear.</b> No property, page or query breached its threshold over the
       last ${a.compare_days} days, and every property loaded on time.</div></div>`;
     return;
   }
   el.innerHTML = `<div class="banner">
-    <span style="color:var(--${c?'critical':'serious'})">${c?'▲':'▲'}</span>
+    <span style="color:var(--${c?'critical':'serious'})">${c?'â–²':'â–²'}</span>
     <div><b>${c} critical, ${w} warning</b> over the last ${a.compare_days} days vs the
-    ${a.compare_days} before. <a href="#" id="toalerts">Review them →</a></div></div>`;
+    ${a.compare_days} before. <a href="#" id="toalerts">Review them â†’</a></div></div>`;
   $('#toalerts').onclick = e => { e.preventDefault(); S.prop=null; S.tab='alerts'; render(); };
 }
 
@@ -515,7 +495,7 @@ function overview(){
     <div class="tile"><div class="k">Clicks · sub-properties</div><div class="v">${fmt(totClicks)}</div>
       <div class="d">sum of the ${nonRoot.length} non-root properties</div></div>
     <div class="tile"><div class="k">Alerts</div>
-      <div class="v">${S.summary.alerts? S.summary.alerts.alerts.length : '–'}</div>
+      <div class="v">${S.summary.alerts? S.summary.alerts.alerts.length : 'â€“'}</div>
       <div class="d">${S.summary.alerts? S.summary.alerts.counts.critical+' critical' : 'not yet run'}</div></div>
   </div>`;
 
@@ -525,9 +505,9 @@ function overview(){
   const table = `<div class="card"><h2>All properties
       <span class="note">last ${S.win} days vs the ${S.win} before · page grain, matches the Search Console UI</span></h2>
     <div class="tablewrap"><table><thead><tr>
-      <th>Property</th><th class="num">Clicks</th><th class="num">Δ</th>
-      <th class="num">Impressions</th><th class="num">Δ</th>
-      <th class="num">CTR</th><th class="num">Avg pos</th><th class="num">Δ</th>
+      <th>Property</th><th class="num">Clicks</th><th class="num">Î”</th>
+      <th class="num">Impressions</th><th class="num">Î”</th>
+      <th class="num">CTR</th><th class="num">Avg pos</th><th class="num">Î”</th>
       <th class="num">Pages</th><th class="num">Data from</th>
     </tr></thead><tbody>` +
     rows.sort((a,b)=>(b.d.clicks||0)-(a.d.clicks||0)).map(({p,d})=>`
@@ -537,7 +517,7 @@ function overview(){
           <div class="sub">${esc(p.site_url)}</div></td>
         <td class="num">${fmt(d.clicks)}</td><td class="num">${deltaHTML(d.clicks,d.clicks_prev)}</td>
         <td class="num">${fmt(d.impressions)}</td><td class="num">${deltaHTML(d.impressions,d.impressions_prev)}</td>
-        <td class="num">${d.impressions? (d.clicks/d.impressions*100).toFixed(2)+'%':'–'}</td>
+        <td class="num">${d.impressions? (d.clicks/d.impressions*100).toFixed(2)+'%':'â€“'}</td>
         <td class="num">${fmt1(d.position)}</td><td class="num">${posDelta(d.position,d.position_prev)}</td>
         <td class="num">${fmt(d.pages)}</td>
         <td class="num" style="color:var(--muted)">${p.earliest_date}</td>
@@ -566,7 +546,7 @@ function propView(){
     <div class="tile"><div class="k">Impressions</div><div class="v">${fmt(d.impressions)}</div>
       <div class="d">${deltaHTML(d.impressions,d.impressions_prev)} from ${fmt(d.impressions_prev)}</div></div>
     <div class="tile"><div class="k">CTR</div>
-      <div class="v">${d.impressions?(d.clicks/d.impressions*100).toFixed(2)+'%':'–'}</div>
+      <div class="v">${d.impressions?(d.clicks/d.impressions*100).toFixed(2)+'%':'â€“'}</div>
       <div class="d">${d.impressions_prev?(d.clicks_prev/d.impressions_prev*100).toFixed(2)+'% prior':''}</div></div>
     <div class="tile"><div class="k">Avg position</div><div class="v">${fmt1(d.position)}</div>
       <div class="d">${posDelta(d.position,d.position_prev,true)} than ${fmt1(d.position_prev)} · lower is better</div></div>
@@ -590,7 +570,7 @@ function propView(){
       <div class="chartgrid" style="margin:0;padding:12px;gap:12px">
         <figure><figcaption>Clicks</figcaption><div id="c_clicks"></div></figure>
         <figure><figcaption>Impressions</figcaption><div id="c_impr"></div></figure>
-        <figure><figcaption>Average position <span class="hint">lower is better — axis inverted</span></figcaption>
+        <figure><figcaption>Average position <span class="hint">lower is better â€” axis inverted</span></figcaption>
           <div id="c_pos"></div></figure>
       </div>
     </div>
@@ -598,405 +578,540 @@ function propView(){
     <div class="tabs" id="tabs">
       <button data-tab="pages" aria-selected="${S.tab==='pages'}">Pages</button>
       <button data-tab="queries" aria-selected="${S.tab==='queries'}">Queries</button>
-      <button data-tab="breakdown" aria-selected="${S.tab==='breakdown'}">Country &amp; device</button>
-      <button data-tab="explore" aria-selected="${S.tab==='explore'}">Explore</button>
+      <button data-tab="country" aria-selected="${S.tab==='country'}">Countries</button>
+      <button data-tab="device" aria-selected="${S.tab==='device'}">Devices</button>
+      <button data-tab="reports" aria-selected="${S.tab==='reports'}">Reports</button>
       <button data-tab="alerts" aria-selected="${S.tab==='alerts'}">Alerts</button>
     </div>
     <div id="tabbody"></div>`;
 }
 
-// Entity tables live in their own per-window files. Fetch once, keep in memory
-// for the session -- switching tabs back and forth must not refetch 16 MB.
-const ENTITY_CACHE = new Map();
-function entityKey(){ return `${S.prop}-${S.tab}-${S.win}`; }
+// ========================================================== data tabs ===
+// Every tab runs the same query with a different GROUP BY, against DuckDB
+// over the Parquet files. That is what lets all four filters work on all four
+// tabs: the numbers are computed per question, not looked up in a precomputed
+// table that only ever had one dimension in it.
+const DIM_TABS = {
+  pages:   {dim:'page',    title:'Pages',     drill:'query'},
+  queries: {dim:'query',   title:'Queries',   drill:'page'},
+  country: {dim:'country', title:'Countries', drill:null},
+  device:  {dim:'device',  title:'Devices',   drill:null},
+};
 
-async function loadEntities(){
-  const key = entityKey();
-  if(ENTITY_CACHE.has(key)) return ENTITY_CACHE.get(key);
-  const r = await fetch(`data/f/${key}.json`, {cache:'no-cache'});
-  if(!r.ok) throw new Error(`${r.status} fetching ${key}.json`);
-  const blob = await r.json();
-  // Compact arrays on the wire, objects in memory -- the table code reads
-  // named fields and the row count is small enough once it is here.
-  const rows = blob.rows.map(a=>({k:a[0],c:a[1],i:a[2],c0:a[3],i0:a[4],p:a[5],p0:a[6]}));
-  ENTITY_CACHE.set(key, rows);
-  return rows;
+let SQLMOD = null;
+const Q = {
+  ready:false, status:'', err:null, busy:false, res:null, ran:null,
+  f:{ from:'', to:'', page:'', pageOp:'contains', query:'', queryOp:'contains',
+      join:'any', countries:[], devices:[] },
+  minClicks:'', limit:0, open:null, drill:null,
+  opts:{countries:[], devices:[]}, countrySearch:'', showAllCountries:false,
+};
+
+function qDefaults(){
+  if(Q.f.to) return;
+  const to = S.summary.latest_date;
+  const d = new Date(to+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()-27);
+  Q.f.to = to; Q.f.from = d.toISOString().slice(0,10);
 }
 
-function entityTable(kind){
-  const pd=S.propData, w=String(S.win);
-  const rows = ENTITY_CACHE.get(entityKey()) || [];
-  if(!rows.length){
-    // "Empty" means two very different things: the backfill has not reached
-    // this window yet, or there genuinely was no traffic. Say which.
-    let msg = 'No pages with traffic in this window.';
-    if(kind==='queries'){
-      const cov = pd.query_coverage;
-      msg = cov
-        ? `Query-level data for this property is loaded through <b>${esc(cov.to)}</b>
-           (${fmt(cov.days)} days from ${esc(cov.from)}), which does not yet reach the
-           last ${S.win} days. The backfill is still running — this tab fills in as it
-           catches up. Page figures on the other tab are complete.`
-        : `No query-level data loaded for this property yet. The backfill loads
-           page grain first, then query grain.`;
+async function qBoot(){
+  if(Q.ready) return;
+  // Version the module URL with the build timestamp. A plain import('./sql.js')
+  // is served from the HTTP cache, so a deploy that changes the query layer
+  // would keep running the previous one against the new page -- which fails in
+  // confusing ways rather than loudly.
+  SQLMOD = SQLMOD || await import(
+    './sql.js?v=' + encodeURIComponent(S.summary.generated_at || Date.now()));
+  await SQLMOD.boot(s=>{ Q.status=s; const n=$('#q_status'); if(n) n.textContent=s; });
+  Q.ready = true;
+}
+
+function qKey(){
+  return JSON.stringify([S.prop, S.tab, Q.f, Q.minClicks, Q.limit]);
+}
+
+async function qRun(force){
+  if(Q.busy) return;
+  const key = qKey();
+  if(!force && Q.ran === key) return;      // already showing this answer
+  Q.busy = true; Q.err = null; Q.open = null; Q.drill = null;
+  repaintTab();
+  try{
+    await qBoot();
+    const dim = DIM_TABS[S.tab].dim, f = Q.f;
+    const [tot, g, series] = await Promise.all([
+      SQLMOD.totals(S.prop, f, [dim]),
+      SQLMOD.group(S.prop, f, [dim], Q.limit || null, Q.minClicks),
+      SQLMOD.daily(S.prop, f, [dim]),
+    ]);
+    if(!Q.opts.countries.length){
+      Q.opts.countries = await SQLMOD.distinct(S.prop, f, 'country');
+      Q.opts.devices   = await SQLMOD.distinct(S.prop, f, 'device');
     }
-    return `<div class="card"><h2>${kind==='pages'?'Pages':'Queries'}</h2>
-      <div class="empty" style="max-width:560px;margin:0 auto;line-height:1.6">${msg}</div>
-      <div style="height:10px"></div></div>`;
-  }
-  const f = S.filters[kind];
-  let list = applyFilter(rows, f);
-  const filtered = list.length !== rows.length;
-  const {key,dir}=S.sort;
-  list.sort((a,b)=>{
-    const av = key==='dc' ? pctOf(a.c,a.c0) : key==='k' ? String(a.k) : a[key];
-    const bv = key==='dc' ? pctOf(b.c,b.c0) : key==='k' ? String(b.k) : b[key];
-    if(av==null) return 1; if(bv==null) return -1;
-    return (av>bv?1:av<bv?-1:0)*dir;
-  });
-  // The table renders 300 rows for the browser's sake, but the CSV exports
-  // every row that survived the filter -- truncating a download to what
-  // happens to be on screen is the behaviour people complain about.
-  S.exportRows = list;
-  S.exportKind = kind;
-  // Render in pages. Filtering and sorting run over every row, but putting
-  // 384,000 <tr> elements in the DOM would lock the tab for minutes.
-  const shown = list.slice(0, S.shown);
-  const max = Math.max(...shown.map(r=>r.c), 1);
+    Q.res = {tot, rows:g.rows, grain:g.grain, exact:g.exact, series,
+             bytes: SQLMOD.bytesFor(g.grain, S.prop, f.from, f.to)};
+    Q.ran = key;
+  }catch(e){ Q.err = e.message || String(e); Q.res = null; }
+  finally{ Q.busy = false; repaintTab(); }
+}
 
-  const caveat = kind==='queries'
-    ? `<p class="caveat">Search Console omits anonymised queries from every
-       query-dimensioned request, so these clicks sum to well below the property total —
-       one probed day was 66% short. Ranking and movement are sound; the absolute
-       numbers are not. Page figures on the other tab are exact.</p>` : '';
+/** Guard: a malformed result should show an error, not a stuck spinner. */
+function resOk(r){
+  return r && Array.isArray(r.rows) && Array.isArray(r.series);
+}
 
-  const th = (k,lbl,cls='num') =>
-    `<th class="${cls}" data-key="${k}" ${S.sort.key===k?`aria-sort="${dir<0?'descending':'ascending'}"`:''}>${lbl}</th>`;
+function repaintTab(){
+  const tb = $('#tabbody');
+  if(tb && DIM_TABS[S.tab]) renderDataTab(tb);
+  else if(tb && S.tab==='reports') renderReports(tb);
+}
 
-  return `<div class="card">
-    <h2>${kind==='pages'?'Pages':'Queries'}
-      <span class="note">last ${S.win} days vs the ${S.win} before ·
-        <b>${fmt(list.length)}</b>${filtered?' of '+fmt(rows.length):''} rows ·
-        complete, not a top-N sample</span></h2>
-    <div class="body" style="padding-bottom:0">
-      <div class="filters">
-        <select id="f_op" aria-label="Match mode">
-          <option value="contains" ${f.op==='contains'?'selected':''}>contains</option>
-          <option value="not" ${f.op==='not'?'selected':''}>does not contain</option>
-        </select>
-        <input type="search" id="f_terms" placeholder="${kind==='pages'
-          ? 'e.g. /kb/, help  — comma-separated' : 'e.g. adaudit, locked out'}"
-          value="${esc(f.terms)}">
-        <select id="f_join" aria-label="Combine terms">
-          <option value="any" ${f.join==='any'?'selected':''}>any term</option>
-          <option value="all" ${f.join==='all'?'selected':''}>all terms</option>
-        </select>
-        <input type="number" id="f_min" min="0" placeholder="min clicks"
-          value="${esc(f.min)}" style="width:104px">
-        ${filtered?'<button class="iconbtn" id="f_reset">Reset</button>':''}
-        <button class="iconbtn" id="dl">↓ CSV · ${fmt(list.length)} rows</button>
+function qReset(){
+  Q.f.page=''; Q.f.query=''; Q.f.countries=[]; Q.f.devices=[];
+  Q.minClicks=''; Q.countrySearch='';
+}
+function qActive(){
+  const f=Q.f;
+  return !!(f.page||f.query||f.countries.length||f.devices.length||Q.minClicks);
+}
+
+/** The filter bar. Identical on every data tab and in the report builder. */
+function filterBar(){
+  const f = Q.f;
+  const presets = [7,28,90,180,365].map(n=>
+    `<button class="iconbtn sm" data-preset="${n}">${n}d</button>`).join('');
+
+  const cs = Q.countrySearch.toLowerCase();
+  let countries = Q.opts.countries;
+  if(cs) countries = countries.filter(c=>c.k.toLowerCase().includes(cs));
+  const shown = Q.showAllCountries ? countries : countries.slice(0,24);
+
+  return `<div class="card" style="margin-bottom:14px">
+    <h2>Filters <span class="note">applied to every tab and every download</span>
+      ${qActive()?'<span style="margin-left:auto"><button class="iconbtn" id="q_reset">Clear all</button></span>':''}</h2>
+    <div class="body">
+      <div class="exgrid">
+        <label>From<input type="date" id="q_from" value="${esc(f.from)}" max="${esc(S.summary.latest_date)}"></label>
+        <label>To<input type="date" id="q_to" value="${esc(f.to)}" max="${esc(S.summary.latest_date)}"></label>
+        <label>Quick range<span class="pair" id="q_presets">${presets}</span></label>
+        <label>Min clicks<input type="number" id="q_min" min="0" value="${esc(Q.minClicks)}" style="width:96px"></label>
+        <label>Row limit<select id="q_limit">
+          ${[0,1000,10000,100000].map(n=>`<option value="${n}" ${Q.limit===n?'selected':''}>${n?fmt(n):'no limit'}</option>`).join('')}
+        </select></label>
+        <label>&nbsp;<button class="iconbtn primary" id="q_run">${Q.busy?'Running…':'Apply'}</button></label>
+      </div>
+
+      <div class="exgrid" style="margin-top:9px">
+        <label>Page<span class="pair">
+          <select id="q_pageop">
+            <option value="contains" ${f.pageOp==='contains'?'selected':''}>contains</option>
+            <option value="not" ${f.pageOp==='not'?'selected':''}>does not contain</option>
+          </select>
+          <input type="search" id="q_page" value="${esc(f.page)}" placeholder="/kb/, help  — comma-separated">
+        </span></label>
+        <label>Query<span class="pair">
+          <select id="q_queryop">
+            <option value="contains" ${f.queryOp==='contains'?'selected':''}>contains</option>
+            <option value="not" ${f.queryOp==='not'?'selected':''}>does not contain</option>
+          </select>
+          <input type="search" id="q_query" value="${esc(f.query)}" placeholder="locked out, adaudit">
+        </span></label>
+        <label>Terms<select id="q_join">
+          <option value="any" ${f.join==='any'?'selected':''}>match any</option>
+          <option value="all" ${f.join==='all'?'selected':''}>match all</option>
+        </select></label>
+      </div>
+
+      <div class="facet"><b>Device</b>
+        ${Q.opts.devices.length
+          ? Q.opts.devices.map(o=>`<button class="chip${f.devices.includes(o.k)?' on':''}"
+              data-dim="devices" data-val="${esc(o.k)}">${esc(o.k.toLowerCase())}
+              <span>${fmt(o.clicks)}</span></button>`).join('')
+          : '<span style="color:var(--muted);font-size:12px">press Apply to load</span>'}
+      </div>
+
+      <div class="facet"><b>Country</b>
+        ${Q.opts.countries.length ? `
+          <input type="search" id="q_csearch" value="${esc(Q.countrySearch)}"
+            placeholder="search ${Q.opts.countries.length} countries…"
+            style="max-width:210px;flex:0 0 auto">
+          ${shown.map(o=>`<button class="chip${f.countries.includes(o.k)?' on':''}"
+              data-dim="countries" data-val="${esc(o.k)}">${esc(o.k)}
+              <span>${fmt(o.clicks)}</span></button>`).join('')}
+          ${countries.length>shown.length
+            ? `<button class="iconbtn sm" id="q_morec">+${countries.length-shown.length} more</button>` : ''}
+          ${f.countries.filter(c=>!shown.some(s=>s.k===c)).map(c=>
+            `<button class="chip on" data-dim="countries" data-val="${esc(c)}">${esc(c)}</button>`).join('')}`
+          : '<span style="color:var(--muted);font-size:12px">press Apply to load</span>'}
       </div>
     </div>
-    <div class="tablewrap"><table><thead><tr>
-      ${th('k', kind==='pages'?'Page':'Query','')}
-      ${th('c','Clicks')}${th('dc','Δ clicks')}${th('i','Impressions')}
-      <th class="num">CTR</th>${th('p','Avg pos')}<th class="num">Δ pos</th>
-    </tr></thead><tbody>` +
-    shown.map(r=>{
-      const isOpen = S.openPage===r.k;
-      // Pages expand into the queries that drive them; queries expand into the
-      // pages that rank for them. Same interaction, opposite direction.
-      const drill = kind==='pages'
-        ? (pd.page_queries && pd.page_queries[r.k])
-        : (pd.query_pages && pd.query_pages[r.k]);
-      const label = kind==='pages' ? String(r.k).replace(pd.site_url,'') || '/' : r.k;
-      let out = `<tr class="${drill?'clickable':''}" data-key="${esc(r.k)}">
-        <td class="ent" title="${esc(r.k)}">${esc(label)}
-          ${drill?'<span style="color:var(--muted)">'+(isOpen?'▾':'▸')+'</span>':''}
-          <span class="bar" style="width:${(r.c/max*100).toFixed(1)}%"></span></td>
-        <td class="num">${fmt(r.c)}</td>
-        <td class="num">${deltaHTML(r.c,r.c0)}<div class="sub" style="color:var(--muted);font-size:11px">${fmt(r.c0)}</div></td>
-        <td class="num">${fmt(r.i)}</td>
-        <td class="num">${r.i?(r.c/r.i*100).toFixed(2)+'%':'–'}</td>
-        <td class="num">${fmt1(r.p)}</td>
-        <td class="num">${posDelta(r.p,r.p0)}</td></tr>`;
-      if(isOpen && drill){
-        const heading = kind==='pages'
-          ? 'Top queries driving this page'
-          : 'Pages ranking for this query, by clicks';
-        out += `<tr><td colspan="7" style="background:var(--surface-2);padding:0">
-          <div style="padding:9px 14px">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">
-              ${heading} · last 28 days · anonymised queries excluded</div>
-            <table style="font-size:12px"><tbody>` +
-            drill.map(([k2,c,i,p])=>{
-              const lbl = kind==='queries' ? (String(k2).replace(pd.site_url,'') || '/') : k2;
-              return `<tr><td class="ent" title="${esc(k2)}">${esc(lbl)}</td>
-              <td class="num">${fmt(c)} clicks</td><td class="num">${fmt(i)} impr</td>
-              <td class="num">pos ${fmt1(p)}</td></tr>`;
-            }).join('') +
-            `</tbody></table></div></td></tr>`;
-      }
-      return out;
-    }).join('') + `</tbody></table></div>` +
-    (list.length > shown.length
-      ? `<div style="padding:12px 15px;text-align:center">
-           <button class="iconbtn" id="more">Show ${fmt(Math.min(1000, list.length-shown.length))} more
-             <span style="color:var(--muted)">· ${fmt(shown.length)} of ${fmt(list.length)}</span></button>
-         </div>`
-      : `<div style="padding:11px 15px;text-align:center;color:var(--muted);font-size:12px">
-           All ${fmt(list.length)} rows shown</div>`) +
-    `${caveat}<div style="height:12px"></div></div>`;
-}
-
-function breakdownView(){
-  const pd=S.propData;
-  if(!pd.country.length && !pd.device.length)
-    return `<div class="card"><div class="empty">No query-grain data loaded for this property yet.</div></div>`;
-  return `<div class="chartgrid">
-    <div class="card"><figure><figcaption>Clicks by country
-      <span class="hint">last 28d · top 25</span></figcaption><div id="bd_country"></div></figure>
-      <p class="caveat" style="padding-bottom:12px">From the query-grain table, so these are
-      shares rather than totals.</p></div>
-    <div class="card"><figure><figcaption>Clicks by device
-      <span class="hint">last 28d</span></figcaption><div id="bd_device"></div></figure></div>
   </div>`;
 }
 
-// ============================================================== explore ===
-// Arbitrary questions, answered by DuckDB-WASM over the Parquet files rather
-// than by a precomputed window. Everything here is a live SQL query.
-let SQLMOD = null;
-const EX = {
-  ready:false, status:'', err:null, busy:false, res:null,
-  f:{ from:'', to:'', page:'', pageOp:'contains', query:'', queryOp:'contains',
-      join:'any', countries:[], devices:[] },
-  groupBy:'query', limit:1000, opts:{countries:[], devices:[]},
-  open:null, drill:null,   // live drilldown: which row is expanded, and its rows
-};
+function wireFilterBar(tb){
+  const f = Q.f;
+  const on = (id, fn, ev='onchange') => { const el=tb.querySelector('#'+id); if(el) el[ev]=fn; };
+  // Text and date inputs update state but do NOT re-query on every keystroke --
+  // each query reads parquet, so it waits for Apply or Enter.
+  const text = (id, prop) => {
+    const el = tb.querySelector('#'+id); if(!el) return;
+    el.oninput = () => { f[prop] = el.value; };
+    el.onkeydown = e => { if(e.key==='Enter') qRun(true); };
+  };
+  text('q_page','page'); text('q_query','query');
+  on('q_from', e=>{ f.from = e.target.value; });
+  on('q_to',   e=>{ f.to   = e.target.value; });
+  on('q_pageop',  e=>{ f.pageOp  = e.target.value; });
+  on('q_queryop', e=>{ f.queryOp = e.target.value; });
+  on('q_join',    e=>{ f.join    = e.target.value; });
+  on('q_limit',   e=>{ Q.limit = +e.target.value; });
+  const mc = tb.querySelector('#q_min');
+  if(mc){ mc.oninput = ()=>{ Q.minClicks = mc.value; };
+          mc.onkeydown = e=>{ if(e.key==='Enter') qRun(true); }; }
+  on('q_run', ()=>qRun(true), 'onclick');
+  on('q_reset', ()=>{ qReset(); qRun(true); }, 'onclick');
+  on('q_morec', ()=>{ Q.showAllCountries = true; repaintTab(); }, 'onclick');
 
-function exDefaults(){
-  if(EX.f.to) return;
-  const to = S.summary.latest_date;
-  const d = new Date(to + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 27);
-  EX.f.to = to;
-  EX.f.from = d.toISOString().slice(0,10);
+  const cse = tb.querySelector('#q_csearch');
+  if(cse) cse.oninput = () => {
+    const pos = cse.selectionStart;
+    Q.countrySearch = cse.value; Q.showAllCountries = false;
+    repaintTab();
+    const n = $('#q_csearch'); if(n){ n.focus(); n.setSelectionRange(pos,pos); }
+  };
+
+  const ps = tb.querySelector('#q_presets');
+  if(ps) ps.onclick = ev => {
+    const b = ev.target.closest('button[data-preset]'); if(!b) return;
+    const to = S.summary.latest_date;
+    const d = new Date(to+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()-(+b.dataset.preset-1));
+    f.to = to; f.from = d.toISOString().slice(0,10);
+    qRun(true);
+  };
+
+  // Clicking a facet chip re-queries immediately: it is a single click with an
+  // unambiguous meaning, unlike a half-typed search term.
+  tb.querySelectorAll('.chip[data-dim]').forEach(c=>c.onclick=()=>{
+    const arr = f[c.dataset.dim], v = c.dataset.val, i = arr.indexOf(v);
+    if(i<0) arr.push(v); else arr.splice(i,1);
+    qRun(true);
+  });
 }
 
-async function exBoot(){
-  if(EX.ready) return;
-  SQLMOD = SQLMOD || await import('./sql.js');
-  await SQLMOD.boot(s=>{ EX.status=s; const n=$('#exstatus'); if(n) n.textContent=s; });
-  EX.ready = true;
-}
+function renderDataTab(tb){
+  if(!tb) return;
+  qDefaults();
+  const cfg = DIM_TABS[S.tab], r = Q.res;
+  const label = k => cfg.dim==='page'
+    ? (String(k).replace(S.propData.site_url,'') || '/') : k;
 
-async function exRun(){
-  EX.busy = true; EX.err = null; EX.open = null; EX.drill = null;
-  repaintExplore();
-  try{
-    await exBoot();
-    const f = EX.f, slug = S.prop;
-    const grain = EX.groupBy==='page' ? 'page' : 'query';
-    const [tot, rows, series] = await Promise.all([
-      SQLMOD.totals(slug, f, grain),
-      SQLMOD.group(slug, f, EX.groupBy, EX.limit),
-      SQLMOD.daily(slug, f, grain),
-    ]);
-    if(!EX.opts.countries.length){
-      EX.opts.countries = (await SQLMOD.distinct(slug, f, 'country')).slice(0,60);
-      EX.opts.devices  = await SQLMOD.distinct(slug, f, 'device');
-    }
-    EX.res = {tot, rows, series, grain,
-      bytes: SQLMOD.bytesFor(grain, slug, f.from, f.to)};
-  }catch(e){
-    EX.err = e.message || String(e);
-  }finally{
-    // finally, not a trailing statement: a throw anywhere above used to leave
-    // busy stuck true, and the tab then showed a spinner that never cleared.
-    EX.busy = false;
-    repaintExplore();
+  // Which body gets rendered decides what elements exist afterwards. The old
+  // result stays in Q.res while a new query runs, so "have a result" is not
+  // the same question as "am I showing it".
+  const showResults = !Q.err && !Q.busy && resOk(r);
+  let body;
+  if(Q.err){
+    body = `<div class="card"><div class="empty">
+      <b style="color:var(--critical)">Query failed.</b><br>${esc(Q.err)}<br>
+      <span style="font-size:12px">If this says manifest.json, the Parquet export
+      has not run yet — run the workflow without <code>skip_parquet</code>.</span>
+      </div></div>`;
+  }else if(Q.busy){
+    body = `<div class="card"><div class="spinner" id="q_status">${esc(Q.status||'Querying…')}</div></div>`;
+  }else if(!showResults){
+    body = `<div class="card"><div class="empty">
+      Set your filters and press <b>Apply</b>.<br>
+      <span style="font-size:12px">The first query downloads the engine (~3 MB)
+      and only the months your date range touches.</span></div></div>`;
+  }else{
+    const max = Math.max(...r.rows.slice(0,S.shown).map(x=>x.clicks), 1);
+    body = `<div class="tiles">
+      <div class="tile"><div class="k">Clicks</div><div class="v">${fmt(r.tot?.clicks)}</div>
+        <div class="d">${esc(Q.f.from)} → ${esc(Q.f.to)}</div></div>
+      <div class="tile"><div class="k">Impressions</div><div class="v">${fmt(r.tot?.impressions)}</div>
+        <div class="d">${r.exact
+          ? 'page grain — matches Search Console'
+          : '<span style="color:var(--serious)">query grain — understated</span>'}</div></div>
+      <div class="tile"><div class="k">CTR</div>
+        <div class="v">${r.tot?.ctr!=null?(r.tot.ctr*100).toFixed(2)+'%':'–'}</div></div>
+      <div class="tile"><div class="k">Avg position</div>
+        <div class="v">${fmt1(r.tot?.position)}</div><div class="d">lower is better</div></div>
+      <div class="tile"><div class="k">${esc(cfg.title)}</div><div class="v">${fmt(r.rows.length)}</div>
+        <div class="d">read ${(r.bytes/1e6).toFixed(1)} MB</div></div>
+    </div>
+    <div class="card" style="margin-bottom:14px"><figure>
+      <figcaption>Clicks per day <span class="hint">with these filters</span></figcaption>
+      <div id="q_chart"></div></figure></div>
+    <div class="card">
+      <h2>${esc(cfg.title)} <span class="note">${fmt(r.rows.length)} rows${
+        Q.limit && r.rows.length>=Q.limit?' — row limit reached':''}</span>
+        <span style="margin-left:auto"><button class="iconbtn" id="q_dl">↓ CSV · ${fmt(r.rows.length)} rows</button></span></h2>
+      <div class="tablewrap"><table><thead><tr>
+        <th>${esc(cfg.dim)}</th><th class="num">Clicks</th><th class="num">Impressions</th>
+        <th class="num">CTR</th><th class="num">Avg pos</th></tr></thead><tbody>` +
+      r.rows.slice(0,S.shown).map(x=>{
+        const open = Q.open===x.k;
+        let tr = `<tr class="${cfg.drill?'clickable':''}" data-k="${esc(x.k)}">
+          <td class="ent" title="${esc(x.k)}">${esc(label(x.k))}
+            ${cfg.drill?`<span style="color:var(--muted)">${open?'▾':'▸'}</span>`:''}
+            <span class="bar" style="width:${(x.clicks/max*100).toFixed(1)}%"></span></td>
+          <td class="num">${fmt(x.clicks)}</td><td class="num">${fmt(x.impressions)}</td>
+          <td class="num">${x.ctr!=null?(x.ctr*100).toFixed(2)+'%':'–'}</td>
+          <td class="num">${fmt1(x.position)}</td></tr>`;
+        if(open){
+          const d = Q.drill;
+          tr += `<tr><td colspan="5" style="background:var(--surface-2);padding:0">
+            <div style="padding:9px 14px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+                color:var(--muted);margin-bottom:6px">Top 10 ${esc(cfg.drill)}s ·
+                same filters and date range</div>` +
+            (!d ? '<div style="font-size:12px;color:var(--muted)">Loading…</div>'
+             : !d.length ? '<div style="font-size:12px;color:var(--muted)">No rows.</div>'
+             : `<table style="font-size:12px"><tbody>` + d.map(y=>
+                 `<tr><td class="ent" title="${esc(y.k)}">${esc(cfg.drill==='page'
+                    ? (String(y.k).replace(S.propData.site_url,'')||'/') : y.k)}</td>
+                  <td class="num">${fmt(y.clicks)} clicks</td>
+                  <td class="num">${fmt(y.impressions)} impr</td>
+                  <td class="num">${y.ctr!=null?(y.ctr*100).toFixed(2)+'%':'–'}</td>
+                  <td class="num">pos ${fmt1(y.position)}</td></tr>`).join('')
+               + `</tbody></table>`) + `</div></td></tr>`;
+        }
+        return tr;
+      }).join('') + `</tbody></table></div>` +
+      (r.rows.length > S.shown
+        ? `<div style="padding:12px;text-align:center"><button class="iconbtn" id="q_more">
+             Show 1,000 more <span style="color:var(--muted)">· ${fmt(S.shown)} of ${fmt(r.rows.length)}</span></button></div>`
+        : `<div style="padding:11px;text-align:center;color:var(--muted);font-size:12px">
+             All ${fmt(r.rows.length)} rows shown</div>`) +
+      (r.exact ? '' : `<p class="caveat">These figures come from the query grain,
+        which Search Console strips of anonymised queries — they rank correctly
+        but sum below the truth. Clear the query, country and device filters to
+        get exact page-grain totals.</p>`) +
+      `<div style="height:12px"></div></div>`;
   }
+
+  tb.innerHTML = filterBar() + body;
+  wireFilterBar(tb);
+
+  const dl = tb.querySelector('#q_dl'); if(dl) dl.onclick = downloadRows;
+  const more = tb.querySelector('#q_more');
+  if(more) more.onclick = ()=>{ S.shown += 1000; repaintTab(); };
+  tb.querySelectorAll('tr.clickable[data-k]').forEach(tr=>tr.onclick=async()=>{
+    const k = tr.dataset.k;
+    if(Q.open===k){ Q.open=null; Q.drill=null; repaintTab(); return; }
+    Q.open=k; Q.drill=null; repaintTab();
+    try{ Q.drill = await SQLMOD.drill(S.prop, Q.f, cfg.dim, k, cfg.drill, 10); }
+    catch(e){ Q.drill = []; }
+    if(Q.open===k) repaintTab();
+  });
+
+  const chartEl = tb.querySelector('#q_chart');
+  if(showResults && chartEl && r.series.length){
+    lineChart(chartEl, [{name:'Clicks', color:'var(--s1)',
+      fill:'var(--fill-1)', pts:r.series.map(x=>[x.d, x.clicks])}],
+      {zeroBase:true, label:'Clicks per day'});
+  }
+
+  // Auto-run on first arrival so the tab is never an empty prompt.
+  if(!resOk(Q.res) && !Q.busy && !Q.err) qRun(false);
 }
 
-/** Repaint only if the Explore tab is still on screen. */
-function repaintExplore(){
-  const tb = $('#tabbody');
-  if(tb && S.tab==='explore') renderExplore(tb);
-}
-
-function exportExploreCSV(){
-  const rows = EX.res?.rows || []; if(!rows.length) return;
-  const head = [EX.groupBy,'clicks','impressions','ctr','position'];
-  const body = rows.map(r=>[r.k, r.clicks, r.impressions,
+function downloadRows(rows, name){
+  const list = Array.isArray(rows) ? rows : (Q.res?.rows || []);
+  if(!list.length) return;
+  const dims = Array.isArray(rows) ? (REP.dims) : [DIM_TABS[S.tab].dim];
+  const head = [...dims,'clicks','impressions','ctr','position'];
+  const body = list.map(r=>[...dims.map(d=>r[d]), r.clicks, r.impressions,
     r.ctr==null?'':r.ctr, r.position==null?'':r.position].map(csvCell).join(','));
+  // Leading BOM, written as an escape rather than an invisible character, so
+  // Excel opens UTF-8 queries as text instead of mojibake.
   const blob = new Blob(['﻿'+head.join(',')+'\n'+body.join('\n')],
     {type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download = `gsc_explore_${S.propData.label.replace(/[^a-z0-9]+/gi,'-')}_${EX.groupBy}_${EX.f.from}_${EX.f.to}.csv`;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = (name || `gsc_${S.propData.label.replace(/[^a-z0-9]+/gi,'-')}_${
+    dims.join('-')}_${Q.f.from}_${Q.f.to}`) + '.csv';
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },0);
 }
 
-function renderExplore(tb){
+// ============================================================= reports ===
+// A saved report is just a filter set plus a grouping, so it produces the same
+// numbers as the tabs -- it exists to answer a repeated question in one click
+// and to cross dimensions the fixed tabs cannot, like page x country.
+const REP = {
+  dims:['query'], name:'', rows:null, busy:false, err:null,
+  saved:[], editing:null, relative:28, useRelative:true, grain:null, exact:true,
+};
+const REP_KEY = 'gscm-reports';
+
+function repLoad(){
+  try{ REP.saved = JSON.parse(localStorage.getItem(REP_KEY) || '[]'); }
+  catch(e){ REP.saved = []; }
+}
+function repPersist(){
+  try{ localStorage.setItem(REP_KEY, JSON.stringify(REP.saved)); }catch(e){}
+}
+
+/** Relative ranges keep a saved report current instead of freezing its dates. */
+function repRange(){
+  if(!REP.useRelative) return {from:Q.f.from, to:Q.f.to};
+  const to = S.summary.latest_date;
+  const d = new Date(to+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()-(REP.relative-1));
+  return {from:d.toISOString().slice(0,10), to};
+}
+
+async function repRun(){
+  REP.busy = true; REP.err = null; repaintTab();
+  try{
+    await qBoot();
+    const rng = repRange();
+    const f = {...Q.f, ...rng};
+    const g = await SQLMOD.group(S.prop, f, REP.dims, Q.limit || null, Q.minClicks);
+    REP.rows = g.rows; REP.grain = g.grain; REP.exact = g.exact;
+  }catch(e){ REP.err = e.message || String(e); REP.rows = null; }
+  finally{ REP.busy = false; repaintTab(); }
+}
+
+function repSave(){
+  const name = (REP.name || '').trim();
+  if(!name){ REP.err = 'Give the report a name first.'; repaintTab(); return; }
+  const def = {
+    name, dims:[...REP.dims], f:JSON.parse(JSON.stringify(Q.f)),
+    minClicks:Q.minClicks, limit:Q.limit,
+    useRelative:REP.useRelative, relative:REP.relative,
+    site:S.prop, saved_at:new Date().toISOString().slice(0,10),
+  };
+  const i = REP.saved.findIndex(r=>r.name===name);
+  if(i<0) REP.saved.push(def); else REP.saved[i] = def;
+  repPersist(); repaintTab();
+}
+
+function repApply(def){
+  REP.dims = [...def.dims]; REP.name = def.name;
+  REP.useRelative = def.useRelative; REP.relative = def.relative;
+  Object.assign(Q.f, JSON.parse(JSON.stringify(def.f)));
+  Q.minClicks = def.minClicks; Q.limit = def.limit;
+  const rng = repRange(); Q.f.from = rng.from; Q.f.to = rng.to;
+  repRun();
+}
+
+function renderReports(tb){
   if(!tb) return;
-  exDefaults();
-  const f = EX.f, r = EX.res;
-  const chips = (list, sel, dim) => list.length
-    ? list.map(o=>`<button class="chip${sel.includes(o.k)?' on':''}"
-        data-dim="${dim}" data-val="${esc(o.k)}">${esc(o.k)}
-        <span>${fmt(o.clicks)}</span></button>`).join('')
-    : '<span style="color:var(--muted);font-size:12px">run a query to load values</span>';
+  qDefaults();
+  if(!REP.saved.length) repLoad();
+  const rng = repRange();
+  const DIMS = ['page','query','country','device'];
+
+  const saved = REP.saved.length
+    ? `<div class="tablewrap"><table><thead><tr>
+        <th>Report</th><th>Group by</th><th>Range</th><th>Filters</th><th></th>
+       </tr></thead><tbody>` +
+      REP.saved.map((r,i)=>`<tr>
+        <td class="ent"><b>${esc(r.name)}</b>
+          <div class="sub">${esc(r.site||'')} · saved ${esc(r.saved_at||'')}</div></td>
+        <td>${r.dims.map(d=>`<code>${esc(d)}</code>`).join(' × ')}</td>
+        <td>${r.useRelative?`last ${r.relative}d`:`${esc(r.f.from)} → ${esc(r.f.to)}`}</td>
+        <td style="font-size:11.5px;color:var(--ink-2)">${esc([
+            r.f.page && `page ${r.f.pageOp==='not'?'∌':'∋'} ${r.f.page}`,
+            r.f.query && `query ${r.f.queryOp==='not'?'∌':'∋'} ${r.f.query}`,
+            r.f.countries?.length && `${r.f.countries.length} countries`,
+            r.f.devices?.length && r.f.devices.join('/').toLowerCase(),
+            r.minClicks && `≥${r.minClicks} clicks`,
+          ].filter(Boolean).join(' · ') || 'none')}</td>
+        <td class="num" style="white-space:nowrap">
+          <button class="iconbtn sm" data-run="${i}">Run</button>
+          <button class="iconbtn sm" data-del="${i}">Delete</button></td>
+      </tr>`).join('') + `</tbody></table></div>`
+    : `<div class="empty">No saved reports yet. Build one below and press
+       <b>Save report</b> — it is stored in this browser.</div>`;
+
+  const results = REP.err
+    ? `<div class="card"><div class="empty"><b style="color:var(--critical)">Failed.</b><br>${esc(REP.err)}</div></div>`
+    : REP.busy
+    ? `<div class="card"><div class="spinner" id="q_status">${esc(Q.status||'Running report…')}</div></div>`
+    : !REP.rows
+    ? ''
+    : `<div class="card"><h2>Result
+        <span class="note">${fmt(REP.rows.length)} rows · grouped by
+        ${REP.dims.join(' × ')}${REP.exact?'':' · query grain, understated'}</span>
+        <span style="margin-left:auto"><button class="iconbtn" id="rep_dl">↓ CSV · ${fmt(REP.rows.length)} rows</button></span></h2>
+      <div class="tablewrap"><table><thead><tr>
+        ${REP.dims.map(d=>`<th>${esc(d)}</th>`).join('')}
+        <th class="num">Clicks</th><th class="num">Impressions</th>
+        <th class="num">CTR</th><th class="num">Avg pos</th></tr></thead><tbody>` +
+      REP.rows.slice(0,500).map(x=>`<tr>
+        ${REP.dims.map(d=>`<td class="ent" title="${esc(x[d])}">${esc(
+          d==='page' ? (String(x[d]).replace(S.propData.site_url,'')||'/') : x[d])}</td>`).join('')}
+        <td class="num">${fmt(x.clicks)}</td><td class="num">${fmt(x.impressions)}</td>
+        <td class="num">${x.ctr!=null?(x.ctr*100).toFixed(2)+'%':'–'}</td>
+        <td class="num">${fmt1(x.position)}</td></tr>`).join('') +
+      `</tbody></table></div>${REP.rows.length>500
+        ? `<div style="padding:11px;text-align:center;color:var(--muted);font-size:12px">
+           500 of ${fmt(REP.rows.length)} shown · CSV has all of them</div>`:''}
+      </div>`;
 
   tb.innerHTML = `
-  <div class="card" style="margin-bottom:14px">
-    <h2>Explore <span class="note">live SQL over the raw rows — any date range,
-      any combination of filters. Nothing here is precomputed.</span></h2>
-    <div class="body">
-      <div class="exgrid">
-        <label>From<input type="date" id="ex_from" value="${esc(f.from)}"
-          min="${esc(S.summary.properties[0]?.earliest_date||'')}" max="${esc(S.summary.latest_date)}"></label>
-        <label>To<input type="date" id="ex_to" value="${esc(f.to)}"
-          max="${esc(S.summary.latest_date)}"></label>
-        <label>Group by<select id="ex_group">
-          ${['query','page','country','device'].map(g=>
-            `<option value="${g}" ${EX.groupBy===g?'selected':''}>${g}</option>`).join('')}
-        </select></label>
-        <label>Row limit<select id="ex_limit">
-          ${[1000,10000,100000,0].map(n=>
-            `<option value="${n}" ${EX.limit===n?'selected':''}>${n?fmt(n):'no limit'}</option>`).join('')}
-        </select></label>
-      </div>
-      <div class="exgrid" style="margin-top:9px">
-        <label>Page<span class="pair">
-          <select id="ex_pageop">
-            <option value="contains" ${f.pageOp==='contains'?'selected':''}>contains</option>
-            <option value="not" ${f.pageOp==='not'?'selected':''}>does not contain</option>
-          </select>
-          <input type="search" id="ex_page" value="${esc(f.page)}" placeholder="/kb/, help">
-        </span></label>
-        <label>Query<span class="pair">
-          <select id="ex_queryop">
-            <option value="contains" ${f.queryOp==='contains'?'selected':''}>contains</option>
-            <option value="not" ${f.queryOp==='not'?'selected':''}>does not contain</option>
-          </select>
-          <input type="search" id="ex_query" value="${esc(f.query)}" placeholder="locked out, adaudit">
-        </span></label>
-        <label>Terms<select id="ex_join">
-          <option value="any" ${f.join==='any'?'selected':''}>match any</option>
-          <option value="all" ${f.join==='all'?'selected':''}>match all</option>
-        </select></label>
-        <label>&nbsp;<button class="iconbtn primary" id="ex_run">${EX.busy?'Running…':'Apply filters'}</button></label>
-      </div>
-
-      <div class="facet"><b>Device</b> ${chips(EX.opts.devices, f.devices, 'devices')}</div>
-      <div class="facet"><b>Country</b> ${chips(EX.opts.countries, f.countries, 'countries')}</div>
-      ${(f.countries.length||f.devices.length||f.page||f.query)
-        ? '<button class="iconbtn" id="ex_reset" style="margin-top:9px">Clear filters</button>' : ''}
+    <div class="card" style="margin-bottom:14px">
+      <h2>Saved reports <span class="note">stored in this browser</span></h2>
+      ${saved}
     </div>
-  </div>` +
 
-  (EX.err ? `<div class="card"><div class="empty">
-      <b style="color:var(--critical)">Query failed.</b><br>${esc(EX.err)}</div></div>`
-   : EX.busy ? `<div class="card"><div class="spinner">
-      ${esc(EX.status||'Querying…')}</div></div>`
-   : !r ? `<div class="card"><div class="empty">
-      Set a range and press <b>Apply filters</b>. The first run downloads the
-      query engine (~3 MB) and only the month files your range touches.</div></div>`
-   : `<div class="tiles">
-        <div class="tile"><div class="k">Clicks</div><div class="v">${fmt(r.tot?.clicks)}</div>
-          <div class="d">${esc(f.from)} → ${esc(f.to)}</div></div>
-        <div class="tile"><div class="k">Impressions</div><div class="v">${fmt(r.tot?.impressions)}</div>
-          <div class="d">${r.grain==='query'?'query grain — understated':'page grain — exact'}</div></div>
-        <div class="tile"><div class="k">CTR</div>
-          <div class="v">${r.tot?.ctr!=null?(r.tot.ctr*100).toFixed(2)+'%':'–'}</div></div>
-        <div class="tile"><div class="k">Avg position</div>
-          <div class="v">${fmt1(r.tot?.position)}</div><div class="d">lower is better</div></div>
-        <div class="tile"><div class="k">Rows</div><div class="v">${fmt(r.rows.length)}</div>
-          <div class="d">scanned ${(r.bytes/1e6).toFixed(1)} MB of parquet</div></div>
+    <div class="card" style="margin-bottom:14px">
+      <h2>Build a report <span class="note">cross any dimensions — page × country,
+        query × device — which the fixed tabs cannot do</span></h2>
+      <div class="body">
+        <div class="exgrid">
+          <label>Name<input type="search" id="rep_name" value="${esc(REP.name)}"
+            placeholder="e.g. India mobile KB pages" style="min-width:230px"></label>
+          <label>Date range<select id="rep_rel">
+            <option value="rel" ${REP.useRelative?'selected':''}>rolling</option>
+            <option value="abs" ${!REP.useRelative?'selected':''}>fixed dates</option>
+          </select></label>
+          ${REP.useRelative
+            ? `<label>Last<select id="rep_days">${[7,28,90,180,365].map(n=>
+                `<option value="${n}" ${REP.relative===n?'selected':''}>${n} days</option>`).join('')}
+               </select></label>`
+            : `<label>Using<span style="font:400 13px var(--font);text-transform:none;
+                 letter-spacing:0;color:var(--ink-2);padding:7px 0">${esc(rng.from)} → ${esc(rng.to)}
+                 <span style="color:var(--muted)">(set above)</span></span></label>`}
+          <label>&nbsp;<button class="iconbtn primary" id="rep_run">${REP.busy?'Running…':'Run report'}</button></label>
+          <label>&nbsp;<button class="iconbtn" id="rep_save">Save report</button></label>
+        </div>
+        <div class="facet"><b>Group by</b>
+          ${DIMS.map(d=>`<button class="chip${REP.dims.includes(d)?' on':''}"
+            data-repdim="${d}">${d}</button>`).join('')}
+          <span style="color:var(--muted);font-size:11.5px;margin-left:6px">
+            pick one or more — order sets the columns</span>
+        </div>
       </div>
-      <div class="card" style="margin-bottom:14px"><figure>
-        <figcaption>Clicks per day <span class="hint">filtered</span></figcaption>
-        <div id="ex_chart"></div></figure></div>
-      <div class="card">
-        <h2>By ${esc(EX.groupBy)} <span class="note">${fmt(r.rows.length)} rows${
-          EX.limit && r.rows.length>=EX.limit ? ' — limit reached, raise it above' : ''}</span>
-          <span style="margin-left:auto"><button class="iconbtn" id="ex_dl">↓ CSV · ${fmt(r.rows.length)} rows</button></span></h2>
-        <div class="tablewrap"><table><thead><tr>
-          <th>${esc(EX.groupBy)}</th><th class="num">Clicks</th><th class="num">Impressions</th>
-          <th class="num">CTR</th><th class="num">Avg pos</th></tr></thead><tbody>` +
-        r.rows.slice(0,500).map(x=>{
-          const open = EX.open===x.k;
-          const into = EX.groupBy==='page' ? 'query'
-                     : EX.groupBy==='query' ? 'page' : null;
-          let tr = `<tr class="${into?'clickable':''}" data-k="${esc(x.k)}">
-            <td class="ent" title="${esc(x.k)}">${
-              esc(EX.groupBy==='page' ? (String(x.k).replace(S.propData.site_url,'')||'/') : x.k)}
-              ${into?`<span style="color:var(--muted)">${open?'▾':'▸'}</span>`:''}</td>
-            <td class="num">${fmt(x.clicks)}</td><td class="num">${fmt(x.impressions)}</td>
-            <td class="num">${x.ctr!=null?(x.ctr*100).toFixed(2)+'%':'–'}</td>
-            <td class="num">${fmt1(x.position)}</td></tr>`;
-          if(open){
-            const d = EX.drill;
-            tr += `<tr><td colspan="5" style="background:var(--surface-2);padding:0">
-              <div style="padding:9px 14px">
-                <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;
-                  color:var(--muted);margin-bottom:6px">Top 10 ${esc(into)}s ·
-                  ${esc(EX.f.from)} → ${esc(EX.f.to)} · same filters as above</div>` +
-              (!d ? '<div style="font-size:12px;color:var(--muted)">Loading…</div>'
-                  : !d.length ? '<div style="font-size:12px;color:var(--muted)">No rows.</div>'
-                  : `<table style="font-size:12px"><tbody>` + d.map(y=>
-                      `<tr><td class="ent" title="${esc(y.k)}">${
-                        esc(into==='page' ? (String(y.k).replace(S.propData.site_url,'')||'/') : y.k)}</td>
-                       <td class="num">${fmt(y.clicks)} clicks</td>
-                       <td class="num">${fmt(y.impressions)} impr</td>
-                       <td class="num">${y.ctr!=null?(y.ctr*100).toFixed(2)+'%':'–'}</td>
-                       <td class="num">pos ${fmt1(y.position)}</td></tr>`).join('')
-                    + `</tbody></table>`) +
-              `</div></td></tr>`;
-          }
-          return tr;
-        }).join('') +
-        `</tbody></table></div>
-        ${r.rows.length>500?`<div style="padding:11px;text-align:center;color:var(--muted);font-size:12px">
-          500 of ${fmt(r.rows.length)} shown · CSV has all of them</div>`:''}
-      </div>`);
+    </div>
 
-  // --- wiring -------------------------------------------------------------
-  const bind = (id, fn, ev='onchange') => { const el=tb.querySelector('#'+id); if(el) el[ev]=fn; };
-  bind('ex_from', e=>{ f.from = e.target.value; });
-  bind('ex_to',   e=>{ f.to   = e.target.value; });
-  bind('ex_page', e=>{ f.page = e.target.value; }, 'oninput');
-  bind('ex_query',e=>{ f.query= e.target.value; }, 'oninput');
-  bind('ex_pageop',  e=>{ f.pageOp  = e.target.value; });
-  bind('ex_queryop', e=>{ f.queryOp = e.target.value; });
-  bind('ex_join',    e=>{ f.join    = e.target.value; });
-  bind('ex_group',   e=>{ EX.groupBy = e.target.value; });
-  bind('ex_limit',   e=>{ EX.limit = +e.target.value; });
-  bind('ex_run', exRun, 'onclick');
-  bind('ex_dl', exportExploreCSV, 'onclick');
-  bind('ex_reset', ()=>{ f.page=''; f.query=''; f.countries=[]; f.devices=[];
-    renderExplore(tb); }, 'onclick');
-  tb.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
-    const arr = f[c.dataset.dim], v = c.dataset.val, i = arr.indexOf(v);
-    if(i<0) arr.push(v); else arr.splice(i,1);
-    renderExplore(tb);
-  });
-  tb.querySelectorAll('tr.clickable[data-k]').forEach(tr=>tr.onclick=async()=>{
-    const k = tr.dataset.k;
-    if(EX.open === k){ EX.open = null; EX.drill = null; renderExplore(tb); return; }
-    EX.open = k; EX.drill = null; repaintExplore();
-    const into = EX.groupBy==='page' ? 'query' : 'page';
-    try{ EX.drill = await SQLMOD.drill(S.prop, EX.f, EX.groupBy, k, into, 10); }
-    catch(e){ EX.drill = []; }
-    if(EX.open === k) repaintExplore();
-  });
+    ${filterBar()}
+    ${results}`;
 
-  if(r && r.series.length){
-    lineChart($('#ex_chart'),
-      [{name:'Clicks', color:'var(--s1)', fill:'var(--fill-1)',
-        pts:r.series.map(x=>[x.d, x.clicks])}],
-      {zeroBase:true, label:'Clicks per day'});
-  }
+  wireFilterBar(tb);
+
+  const nm = tb.querySelector('#rep_name');
+  if(nm) nm.oninput = ()=>{ REP.name = nm.value; };
+  const rl = tb.querySelector('#rep_rel');
+  if(rl) rl.onchange = ()=>{ REP.useRelative = rl.value==='rel'; repaintTab(); };
+  const rd = tb.querySelector('#rep_days');
+  if(rd) rd.onchange = ()=>{ REP.relative = +rd.value; repaintTab(); };
+  const rr = tb.querySelector('#rep_run'); if(rr) rr.onclick = repRun;
+  const rs = tb.querySelector('#rep_save'); if(rs) rs.onclick = repSave;
+  const rdl = tb.querySelector('#rep_dl');
+  if(rdl) rdl.onclick = ()=>downloadRows(REP.rows,
+    `gsc_report_${(REP.name||'untitled').replace(/[^a-z0-9]+/gi,'-')}_${rng.from}_${rng.to}`);
+
+  tb.querySelectorAll('.chip[data-repdim]').forEach(c=>c.onclick=()=>{
+    const d = c.dataset.repdim, i = REP.dims.indexOf(d);
+    if(i<0) REP.dims.push(d); else if(REP.dims.length>1) REP.dims.splice(i,1);
+    repaintTab();
+  });
+  tb.querySelectorAll('button[data-run]').forEach(b=>b.onclick=()=>
+    repApply(REP.saved[+b.dataset.run]));
+  tb.querySelectorAll('button[data-del]').forEach(b=>b.onclick=()=>{
+    REP.saved.splice(+b.dataset.del,1); repPersist(); repaintTab(); });
 }
 
 function alertsView(scopeSite){
@@ -1008,7 +1123,7 @@ function alertsView(scopeSite){
     <div class="empty">Nothing breached a threshold${scopeSite?' for this property':''}
     over the last ${a.compare_days} days.</div></div>`;
 
-  const icon = {critical:'▲', warning:'◆', info:'●'};
+  const icon = {critical:'â–²', warning:'â—†', info:'â—'};
   const groups = {pipeline:'Pipeline health', property:'Property level', page:'Pages', query:'Queries'};
   let out='';
   for(const [scope,title] of Object.entries(groups)){
@@ -1026,8 +1141,8 @@ function alertsView(scopeSite){
             ${scopeSite?'':`<div class="prop">${esc(x.site_url)}</div>`}</div></div>`;
       }).join('') + `</div>`;
   }
-  return `<div class="banner"><span>⚙</span><div>Thresholds live in
-    <b>alerts.config.json</b> in the repo — there is no server to save settings to.
+  return `<div class="banner"><span>âš™</span><div>Thresholds live in
+    <b>alerts.config.json</b> in the repo â€” there is no server to save settings to.
     Current window: last <b>${a.compare_days} days</b> vs the ${a.compare_days} before.</div></div>` + out;
 }
 
@@ -1080,69 +1195,12 @@ function render(){
 
   // --- tab body ----------------------------------------------------------
   const tb=$('#tabbody');
-  if(S.tab==='pages' || S.tab==='queries'){
-    if(!ENTITY_CACHE.has(entityKey())){
-      const meta = (S.summary.entity_files||{})[S.prop]?.[`${S.tab}-${S.win}`];
-      tb.innerHTML = `<div class="card"><div class="spinner">
-        Loading all ${meta? fmt(meta.n)+' rows' : 'rows'}${
-          meta && meta.kb>2000 ? ` · ${(meta.kb/1024).toFixed(1)} MB` : ''} …</div></div>`;
-      loadEntities().then(render).catch(e=>{
-        tb.innerHTML = `<div class="card"><div class="empty">
-          Could not load the ${esc(S.tab)} table (${esc(e.message)}).<br>
-          Run <code>build_payload.py</code> to regenerate it.</div></div>`;
-      });
-      paintFooter();
-      return;
-    }
-    tb.innerHTML = entityTable(S.tab);
-    const more = tb.querySelector('#more');
-    if(more) more.onclick = () => { S.shown += 1000; render(); };
-    tb.querySelectorAll('th[data-key]').forEach(th=>th.onclick=()=>{
-      const k=th.dataset.key;
-      S.sort = S.sort.key===k ? {key:k,dir:-S.sort.dir} : {key:k,dir:k==='k'?1:-1};
-      render();
-    });
-    const dl=tb.querySelector('#dl');
-    if(dl) dl.onclick = downloadCSV;
-
-    const f = S.filters[S.tab];
-    // Re-render on every keystroke, then restore focus and caret -- the table
-    // is rebuilt wholesale, so the live input would otherwise lose both.
-    const live = (id, prop, ev) => {
-      const el = tb.querySelector('#'+id); if(!el) return;
-      el[ev] = () => {
-        const pos = el.selectionStart;
-        f[prop] = el.value;
-        S.shown = 300;   // a new filter starts at the top of its own result set
-        render();
-        const n = $('#'+id);
-        if(n){ n.focus(); if(n.setSelectionRange && n.type!=='number') n.setSelectionRange(pos,pos); }
-      };
-    };
-    live('f_terms','terms','oninput');
-    live('f_min','min','oninput');
-    live('f_op','op','onchange');
-    live('f_join','join','onchange');
-    const rst = tb.querySelector('#f_reset');
-    if(rst) rst.onclick = () => {
-      S.filters[S.tab] = {op:'contains', terms:'', join:'any', min:''};
-      render();
-    };
-    tb.querySelectorAll('tr.clickable[data-key]').forEach(tr=>tr.onclick=()=>{
-      S.openPage = S.openPage===tr.dataset.key ? null : tr.dataset.key; render();
-    });
-  } else if(S.tab==='explore'){
-    renderExplore(tb);
-  } else if(S.tab==='breakdown'){
-    tb.innerHTML = breakdownView();
-    if($('#bd_country')) barChart($('#bd_country'), S.propData.country.map(r=>({k:r.k,v:r.c})));
-    if($('#bd_device')) barChart($('#bd_device'), S.propData.device.map(r=>({k:r.k,v:r.c})));
-  } else {
-    tb.innerHTML = alertsView(S.propData.site_url);
-  }
+  if(DIM_TABS[S.tab])      renderDataTab(tb);
+  else if(S.tab==='reports') renderReports(tb);
+  else                       tb.innerHTML = alertsView(S.propData.site_url);
 
   $('#tabs').onclick = ev=>{ const b=ev.target.closest('button[data-tab]'); if(!b)return;
-    S.tab=b.dataset.tab; S.shown=300; render(); };
+    S.tab=b.dataset.tab; S.shown=300; Q.open=null; Q.drill=null; render(); };
 
   paintFooter();
 }
@@ -1156,15 +1214,15 @@ function paintFooter(){
     window and no stored history until the backfill reaches them.<br>` : '') + `
     Page figures come from a page-grain Search Console pull and match the UI's Pages report exactly.
     Query, country and device figures come from a query-grain pull, which Search Console strips of
-    anonymised queries — they rank correctly but under-count.<br>
-    Page history starts ${s.properties.length? s.properties.map(p=>p.earliest_date).sort()[0] : '–'};
+    anonymised queries â€” they rank correctly but under-count.<br>
+    Page history starts ${s.properties.length? s.properties.map(p=>p.earliest_date).sort()[0] : 'â€“'};
     the API serves only a rolling ~16 months and nothing earlier can be recovered.
     Data through <b>${s.latest_date}</b>, built ${s.generated_at.replace('T',' ').replace('+00:00',' UTC')}.`;
 }
 
 // ================================================================= load ===
 async function loadProp(){
-  $('#main').innerHTML = '<div class="spinner">Loading property…</div>';
+  $('#main').innerHTML = '<div class="spinner">Loading propertyâ€¦</div>';
   try{
     const r = await fetch(`data/prop_${S.prop}.json`, {cache:'no-cache'});
     if(!r.ok) throw new Error(r.status);

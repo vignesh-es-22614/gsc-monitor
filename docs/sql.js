@@ -111,6 +111,27 @@ function source(grain, slug, f) {
   return `read_parquet([${files.map(lit).join(',')}])`;
 }
 
+/**
+ * Which grain can answer this question.
+ *
+ * The page grain is exact -- it matches Search Console's Pages report -- but
+ * it carries no query, country or device column, because the pull that
+ * produced it deliberately omitted the query dimension to avoid losing
+ * anonymised queries. The moment a question touches any of those three, only
+ * the query grain can answer it, and that grain under-counts.
+ *
+ * So: use the exact source whenever the question allows, and tell the caller
+ * which one it got so the UI can say whether the number is exact.
+ */
+export function grainFor(dims, f) {
+  const needsQueryGrain =
+    dims.some(d => d === 'query' || d === 'country' || d === 'device') ||
+    (f.query || '').trim() !== '' ||
+    (f.countries?.length || 0) > 0 ||
+    (f.devices?.length || 0) > 0;
+  return needsQueryGrain ? 'query' : 'page';
+}
+
 async function run(sql) {
   const res = await _conn.query(sql);
   return res.toArray().map(r => {
@@ -121,30 +142,44 @@ async function run(sql) {
   });
 }
 
-/** Top-level totals for the current filter. */
-export async function totals(slug, f, grain = 'page') {
+/** Top-level totals for the current filter, on the most exact grain available. */
+export async function totals(slug, f, dims = []) {
+  const grain = grainFor(dims, f);
   const src = source(grain, slug, f);
   if (!src) return null;
   const [row] = await run(`SELECT ${METRICS} FROM ${src} WHERE ${where(f, grain)}`);
+  if (row) { row.grain = grain; row.exact = grain === 'page'; }
   return row;
 }
 
-/** Grouped rows — dim is 'page', 'query', 'country' or 'device'. */
-export async function group(slug, f, dim, limit = null) {
-  const grain = dim === 'page' ? 'page' : 'query';
+/**
+ * Grouped rows. `dims` is one or more of page, query, country, device — more
+ * than one gives a cross-tab, which is what the report builder needs.
+ *
+ * Returns {rows, grain, exact} so the caller can label the numbers honestly.
+ */
+export async function group(slug, f, dims, limit = null, minClicks = 0) {
+  const list = Array.isArray(dims) ? dims : [dims];
+  const grain = grainFor(list, f);
   const src = source(grain, slug, f);
-  if (!src) return [];
-  return run(`
-    SELECT ${dim} AS k, ${METRICS}
+  if (!src) return { rows: [], grain, exact: grain === 'page' };
+  const sel = list.join(', ');
+  const rows = await run(`
+    SELECT ${sel}, ${METRICS}
     FROM ${src}
-    WHERE ${where(f, grain)} AND ${dim} IS NOT NULL
-    GROUP BY k
+    WHERE ${where(f, grain)} AND ${list.map(d => `${d} IS NOT NULL`).join(' AND ')}
+    GROUP BY ${sel}
+    ${minClicks ? `HAVING SUM(clicks) >= ${Number(minClicks) || 0}` : ''}
     ORDER BY clicks DESC, impressions DESC
     ${limit ? `LIMIT ${limit}` : ''}`);
+  // The table code reads a single `k`; a cross-tab joins its dimensions.
+  for (const r of rows) r.k = list.map(d => r[d]).join(' · ');
+  return { rows, grain, exact: grain === 'page' };
 }
 
 /** Daily series for charting, honouring every active filter. */
-export async function daily(slug, f, grain = 'page') {
+export async function daily(slug, f, dims = []) {
+  const grain = grainFor(dims, f);
   const src = source(grain, slug, f);
   if (!src) return [];
   return run(`
