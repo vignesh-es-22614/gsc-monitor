@@ -7,3 +7,6 @@ bigquery_token.json
 __pycache__/
 *.pyc
 .venv/
+
+# Local digest preview written by "alerts.py --preview"; never published.
+docs/_digest_preview.html

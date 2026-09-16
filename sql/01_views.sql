@@ -14,10 +14,9 @@
 --                                query-dimensioned request, so these clicks
 --                                sum to well below the truth (66% low on one
 --                                probed day). Use for RELATIVE ranking only.
---                                For ADAP this reaches back to 2022-01-01 by
---                                unioning the old gsc_api_export, which was
---                                pulled the same way and is therefore on the
---                                same (understated) basis.
+--                                v_query_daily_full reaches back to 2022 for
+--                                ADAP but scans 15x the bytes -- read the
+--                                plain view unless you need that history.
 --
 -- NEVER SUM ACROSS site_url. https://www.manageengine.com/ is a URL-prefix
 -- property that contains twelve of the other thirteen, so every product-page
@@ -89,6 +88,13 @@ GROUP BY date, page;
 -- --------------------------------------------------------------------------
 -- Query grain: relative ranking only. Deduplicated on the full key, for the
 -- same concurrent-writer reason as v_page_daily above.
+--
+-- THIS is what the pipeline reads. It deliberately does NOT union the legacy
+-- gsc_api_export: that table is unpartitioned and 12.1 GB, so including it
+-- makes BigQuery scan all of it on every read no matter how narrow the date
+-- filter. Measured on a 14-day window: 2.56 GB through the unioned view
+-- against 0.17 GB through this one, a 15x bill for history the window never
+-- touches. Use v_query_daily_full when you actually want pre-2025 ADAP.
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE VIEW `it-security-online-marketing.gsc_data.v_query_daily` AS
 SELECT * EXCEPT(loaded_at) FROM (
@@ -109,15 +115,26 @@ SELECT * EXCEPT(loaded_at) FROM (
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY site_url, date, page, query, country, device
     ORDER BY loaded_at DESC NULLS LAST) = 1
-)
+);
+
+-- --------------------------------------------------------------------------
+-- Query grain back to 2022 -- ADAP only beyond 2025-04-29.
+--
+-- Unlike the page-grain pair, BOTH halves here are measured the same way:
+-- each was pulled with the query dimension, so each is missing anonymised
+-- queries. Query-level trends therefore DO legitimately span the join, which
+-- page totals never can. One caveat survives: the 2022-2023 pull was clipped
+-- at 50,000 rows/day and 32 days in 2023 sit at that ceiling, so the long tail
+-- of those days is absent and history is understated there.
+--
+-- Expensive by construction (see the note above). Query it with an explicit
+-- date range and expect to scan the legacy table.
+-- --------------------------------------------------------------------------
+CREATE OR REPLACE VIEW `it-security-online-marketing.gsc_data.v_query_daily_full` AS
+SELECT * FROM `it-security-online-marketing.gsc_data.v_query_daily`
 
 UNION ALL
 
--- Pre-2025-04-29 ADAP. Same measurement basis as the rows above (both drop
--- anonymised queries), so query-level trends DO span the join -- unlike page
--- totals. One caveat remains: the 2022-2023 pull was clipped at 50,000
--- rows/day, and 32 days in 2023 sit at that ceiling, so the long tail of
--- those days is missing and history is understated there.
 SELECT
   `Date` AS date,
   'https://www.manageengine.com/products/active-directory-audit/' AS site_url,

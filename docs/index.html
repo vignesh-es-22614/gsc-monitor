@@ -651,6 +651,9 @@ function alertsView(scopeSite){
 // ================================================================ paint ===
 function render(){
   const m=$('#main');
+  // Repaint the sidebar too: aria-current lives there, so without this the
+  // selected property never becomes the highlighted one.
+  renderPropList();
   if(S.prop===null){
     m.innerHTML = overview();
     const w=String(S.win);
@@ -783,7 +786,7 @@ function initTheme(){
     S.win=+b.dataset.win;
     $('#winseg').querySelectorAll('button').forEach(x=>
       x.setAttribute('aria-pressed', +x.dataset.win===S.win));
-    renderPropList(); render();
+    render();
   };
   $('#subtitle').textContent =
     `${S.summary.properties.length} properties · data through ${S.summary.latest_date}`;

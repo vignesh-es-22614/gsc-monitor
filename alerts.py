@@ -444,7 +444,12 @@ def render_email(alerts: list[dict], latest: dt.date, n: int, url: str) -> str:
             'thresholds.</td></tr>'
         ]
 
-    return f"""<html><body style="margin:0;background:#f9fafb;padding:24px">
+    # The charset declaration is not optional: page URLs carry percent-encoded
+    # and non-ASCII characters, and without it a client decodes the UTF-8 as
+    # latin-1 and every truncated entity ends in mojibake.
+    return f"""<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#f9fafb;padding:24px">
 <div style="max-width:760px;margin:0 auto;background:#fff;border:1px solid #eaecf0;border-radius:10px;overflow:hidden">
   <div style="padding:20px 24px;border-bottom:1px solid #eaecf0">
     <div style="font:600 17px system-ui,sans-serif;color:#101828">Search Console monitor</div>
@@ -492,6 +497,14 @@ def main() -> None:
     p.add_argument("--config", default=os.path.join(HERE, "alerts.config.json"))
     p.add_argument("--token", default=None)
     p.add_argument("--no-email", action="store_true")
+    p.add_argument(
+        "--preview",
+        metavar="PATH",
+        help=(
+            "Write the digest HTML to this file instead of sending it. Use it "
+            "to check what the recipients would get before wiring up SMTP."
+        ),
+    )
     p.add_argument(
         "--url",
         default="https://vignesh-es-22614.github.io/gsc-monitor/",
@@ -564,6 +577,11 @@ def main() -> None:
         print(f"  [{a['severity']:8}] {a['scope']:8} {str(a['entity'])[:60]:60} {a['message']}")
     if len(alerts) > 20:
         print(f"  ... and {len(alerts) - 20} more")
+
+    if args.preview:
+        with open(args.preview, "w", encoding="utf-8") as fh:
+            fh.write(render_email(alerts, latest, n, args.url))
+        print(f"  digest preview written to {args.preview}")
 
     if args.no_email or not cfg["email"]["enabled"]:
         return

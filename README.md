@@ -209,6 +209,19 @@ nothing appears broken.
 | `gsc_page_daily_legacy_adap` | 797K | 2025-04-29 → 2026-09-08 | pre-migration snapshot, safe to drop once verified |
 | `de_stm_search_console` | 537K | 2025-01 → 2026-05 | 5 German pages; those URLs also appear under the www root property |
 
-`v_page_daily`, `v_page_daily_full`, `v_query_daily` and `v_load_health` in
-`sql/01_views.sql` wrap these with the caveats encoded as columns
-(`source`, `totals_reliable`).
+### The views
+
+| View | Reads | Use |
+|---|---|---|
+| `v_page_daily` | deduped page table | **everything.** The pipeline's source of truth |
+| `v_page_daily_full` | + legacy ADAP | pre-2025 page history, `totals_reliable = FALSE` |
+| `v_query_daily` | deduped query table | query/country/device, last ~16 months |
+| `v_query_daily_full` | + legacy ADAP | pre-2025 query history — **15x the bytes** |
+| `v_load_health` | page table | freshness and gaps per property |
+| `v_dupe_report` | raw page table | how badly the concurrent loaders are overlapping |
+
+`gsc_api_export` is **unpartitioned and 12.1 GB**, so any view that unions it
+scans all of it regardless of the date filter. A 14-day window costs 2.56 GB
+through the unioned view against 0.45 GB through the plain one. That is why
+the `_full` views are separate and why nothing in the pipeline reads them —
+reach for them only when you genuinely want pre-2025 ADAP history.
