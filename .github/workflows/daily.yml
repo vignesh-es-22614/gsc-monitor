@@ -1,0 +1,106 @@
+name: Daily Search Console refresh
+
+# 04:00 UTC = 09:30 IST. Search Console finalises on a ~3 day lag and the
+# loader targets today-3, so an early run still picks up everything available.
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      send_email:
+        description: 'Email the digest even if nothing breached a threshold'
+        type: boolean
+        default: false
+      backfill_from:
+        description: 'Re-pull from this date (YYYY-MM-DD). Leave blank to resume.'
+        type: string
+        default: ''
+
+# Needed to commit the rebuilt payload back to the repo; Pages serves docs/.
+permissions:
+  contents: write
+
+concurrency:
+  group: gsc-daily
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # The OAuth refresh token carries both webmasters.readonly and BigQuery
+      # scopes. A service account would need adding as a user on all fourteen
+      # Search Console properties, which is a per-property manual grant.
+      - name: Restore credentials
+        env:
+          GSC_TOKEN_JSON: ${{ secrets.GSC_TOKEN_JSON }}
+        run: |
+          if [ -z "$GSC_TOKEN_JSON" ]; then
+            echo "::error::GSC_TOKEN_JSON secret is not set."
+            exit 1
+          fi
+          printf '%s' "$GSC_TOKEN_JSON" > gsc_token.json
+          python -c "import json;d=json.load(open('gsc_token.json'));assert d.get('refresh_token'),'no refresh_token'"
+
+      - name: Pull Search Console into BigQuery
+        run: |
+          if [ -n "${{ inputs.backfill_from }}" ]; then
+            python gsc_export.py --all-sites --grain both --workers 6 \
+              --start "${{ inputs.backfill_from }}"
+          else
+            python gsc_export.py --all-sites --grain both --workers 6
+          fi
+
+      # --api-fallback pulls any property BigQuery has no rows for straight
+      # from the Search Console API, so a backfill still in flight never leaves
+      # a property missing from the dashboard.
+      - name: Build dashboard payload
+        run: python build_payload.py --out docs/data --api-fallback
+
+      # always(): the payload is written before alerting runs, so an SMTP
+      # failure must not cost the day's data refresh. The job still ends red.
+      - name: Detect anomalies and email the digest
+        if: always()
+        env:
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+        run: |
+          EXTRA=""
+          if [ "${{ inputs.send_email }}" = "true" ]; then
+            python -c "
+import json,sys
+p='alerts.config.json'
+c=json.load(open(p)); c['email']['send_when_clean']=True
+json.dump(c,open(p,'w'),indent=2)"
+          fi
+          python alerts.py --out docs/data \
+            --url "${DASHBOARD_URL:-https://vignesh-es-22614.github.io/gsc-monitor/}"
+
+      - name: Commit the refreshed payload
+        if: always()
+        run: |
+          git checkout -- alerts.config.json || true
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add docs/
+          if git diff --cached --quiet; then
+            echo "No change in the data — nothing to commit."
+          else
+            git commit -m "Refresh Search Console dashboard — data through $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Clean up credentials
+        if: always()
+        run: rm -f gsc_token.json

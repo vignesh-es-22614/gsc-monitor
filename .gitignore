@@ -1,0 +1,9 @@
+# Credentials never belong in the repo. In CI the token is materialised from
+# the GSC_TOKEN_JSON secret and deleted again at the end of the job.
+gsc_token.json
+*client_secret*.json
+bigquery_token.json
+
+__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search Console Monitor</title>
+<style>
+/* ---------------------------------------------------------------- tokens */
+:root{
+  color-scheme: light;
+  --plane:#f9f9f7; --surface:#fcfcfb; --surface-2:#f4f4f1;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --up:#006300; --down:#b42318;
+  --fill-1:rgba(42,120,214,.13);
+  --radius:10px;
+  --font:system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#232321;
+    --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --up:#0ca30c; --down:#e66767;
+    --fill-1:rgba(57,135,229,.16);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --surface-2:#232321;
+  --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --up:#0ca30c; --down:#e66767;
+  --fill-1:rgba(57,135,229,.16);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);font:14px/1.5 var(--font)}
+a{color:var(--s1)}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+
+/* ---------------------------------------------------------------- shell */
+.wrap{max-width:1500px;margin:0 auto;padding-block:20px;padding-left:16px;padding-right:16px}
+header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.brand h1{font-size:19px}
+.brand .sub{color:var(--muted);font-size:12.5px;margin-top:3px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:2px}
+.seg button{border:0;background:none;color:var(--ink-2);font:500 12.5px var(--font);
+  padding:5px 11px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);
+  box-shadow:0 1px 2px rgba(0,0,0,.07);font-weight:600}
+.iconbtn{border:1px solid var(--border);background:var(--surface);color:var(--ink-2);
+  border-radius:8px;padding:6px 10px;font:500 12.5px var(--font);cursor:pointer}
+.iconbtn:hover{color:var(--ink)}
+
+.layout{display:grid;grid-template-columns:266px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+
+/* ---------------------------------------------------------------- cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.card>h2{font-size:13px;padding:13px 15px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card>h2 .note{font-weight:400;color:var(--muted);font-size:11.5px}
+.card .body{padding:15px}
+
+/* ------------------------------------------------------------- property */
+.plist{max-height:none;overflow:auto}
+.plist button{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;
+  padding:9px 14px;border-bottom:1px solid var(--border);font:inherit;color:inherit}
+.plist button:last-child{border-bottom:0}
+.plist button:hover{background:var(--surface-2)}
+.plist button[aria-current="true"]{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--s1)}
+.plist .pname{font-size:12.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plist .pmeta{display:flex;gap:8px;align-items:baseline;margin-top:2px;font-size:11.5px;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.rootbadge{font-size:9.5px;font-weight:600;letter-spacing:.04em;color:var(--muted);
+  border:1px solid var(--border);border-radius:4px;padding:0 4px;margin-left:6px;vertical-align:1px}
+
+/* ----------------------------------------------------------- stat tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px}
+.tile .k{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.tile .v{font-size:25px;font-weight:600;margin-top:5px;letter-spacing:-.02em}
+.tile .d{font-size:12px;margin-top:3px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.up{color:var(--up)} .down{color:var(--down)}
+
+/* --------------------------------------------------------------- charts */
+.chartgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-bottom:16px}
+figure{margin:0}
+figcaption{font-size:12.5px;font-weight:600;padding:12px 15px 0;display:flex;
+  justify-content:space-between;align-items:baseline;gap:10px}
+figcaption .hint{font-weight:400;color:var(--muted);font-size:11.5px}
+.plot{position:relative;padding:6px 8px 4px}
+.plot svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--surface);color:var(--ink);
+  border:1px solid var(--border);border-radius:7px;padding:7px 9px;font-size:12px;
+  box-shadow:0 4px 14px rgba(0,0,0,.14);white-space:nowrap;opacity:0;transition:opacity .08s;z-index:5;
+  font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:12px;padding:0 15px 11px;font-size:11.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.swatch{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+/* --------------------------------------------------------------- tables */
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid var(--border)}
+.tabs button{border:0;background:none;color:var(--muted);font:600 13px var(--font);
+  padding:8px 13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--s1)}
+
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.045em;color:var(--muted);
+  font-weight:600;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface);z-index:1}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+th[aria-sort]:after{content:"";margin-left:4px}
+th[aria-sort="descending"]:after{content:"▾"}
+th[aria-sort="ascending"]:after{content:"▴"}
+tbody tr:hover{background:var(--surface-2)}
+td.ent{max-width:520px;overflow:hidden;text-overflow:ellipsis}
+td.ent .sub{color:var(--muted);font-size:11px}
+tr.clickable{cursor:pointer}
+.delta{font-variant-numeric:tabular-nums;font-size:12px}
+.bar{height:3px;border-radius:2px;background:var(--s1);display:block;margin-top:3px;min-width:1px}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:11px}
+input[type=search]{flex:1;min-width:150px;background:var(--surface-2);border:1px solid var(--border);
+  color:var(--ink);border-radius:8px;padding:7px 11px;font:13px var(--font)}
+input[type=search]::placeholder{color:var(--muted)}
+
+/* --------------------------------------------------------------- alerts */
+.alert{display:grid;grid-template-columns:auto minmax(0,1fr);gap:11px;padding:11px 15px;
+  border-bottom:1px solid var(--border);align-items:start}
+.alert:last-child{border-bottom:0}
+.sev{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;
+  letter-spacing:.05em;white-space:nowrap;padding-top:2px}
+.sev.critical{color:var(--critical)} .sev.warning{color:var(--serious)} .sev.info{color:var(--s1)}
+.alert .ent{font-size:13px;font-weight:500;overflow-wrap:anywhere}
+.alert .msg{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.alert .prop{font-size:11px;color:var(--muted);margin-top:2px}
+
+.empty{padding:26px 15px;color:var(--muted);font-size:13px;text-align:center}
+.banner{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:11px 14px;font-size:12.5px;color:var(--ink-2);margin-bottom:14px;display:flex;gap:9px}
+.banner b{color:var(--ink);font-weight:600}
+.caveat{font-size:11.5px;color:var(--muted);padding:10px 15px 0;line-height:1.5}
+footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--border);
+  color:var(--muted);font-size:11.5px;line-height:1.6}
+.hidden{display:none!important}
+.spinner{padding:40px;text-align:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="brand">
+    <h1>Search Console Monitor</h1>
+    <div class="sub" id="subtitle">Loading…</div>
+  </div>
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="Comparison window" id="winseg"></div>
+    <button class="iconbtn" id="themebtn" title="Toggle theme">◐ Theme</button>
+  </div>
+</header>
+
+<div id="alertbanner"></div>
+
+<div class="layout">
+
+  <!-- ------------------------------------------------ property selector -->
+  <aside>
+    <div class="card">
+      <h2>Properties <span class="note" id="propcount"></span></h2>
+      <div class="plist" id="plist"></div>
+    </div>
+    <p class="caveat" style="padding-left:2px">
+      <b>manageengine.com</b> is a URL-prefix property that contains the product
+      properties listed under it. Their figures overlap — never add properties together.
+    </p>
+  </aside>
+
+  <!-- ------------------------------------------------------ main region -->
+  <main id="main">
+    <div class="spinner">Loading data…</div>
+  </main>
+</div>
+
+<footer>
+  <div id="foot"></div>
+</footer>
+</div>
+
+<script>
+// ============================================================== state ===
+const S = {
+  summary:null, prop:null, propData:null, win:28, tab:'pages',
+  smooth:true, sort:{key:'c',dir:-1}, q:'', openPage:null, range:180,
+};
+const $ = s => document.querySelector(s);
+const fmt = n => n==null ? '–' : n.toLocaleString('en-US');
+const fmt1 = n => n==null ? '–' : n.toFixed(1);
+const pctOf = (a,b) => (!b) ? null : (a-b)/b*100;
+
+function deltaHTML(cur, prev, opts={}){
+  const d = pctOf(cur, prev);
+  if(d===null) return '<span style="color:var(--muted)">new</span>';
+  // Position is the one metric where a rising number is bad.
+  const good = opts.lowerIsBetter ? d < 0 : d > 0;
+  const cls = Math.abs(d) < 0.05 ? '' : (good ? 'up' : 'down');
+  const arrow = Math.abs(d) < 0.05 ? '' : (d>0 ? '↑' : '↓');
+  return `<span class="delta ${cls}">${arrow}${Math.abs(d).toFixed(1)}%</span>`;
+}
+// Position is the one metric where the number and the outcome move opposite
+// ways: 11.0 -> 12.3 is a bigger number and a worse ranking. An arrow is
+// ambiguous here whichever way it points, so show the signed change instead
+// and let colour carry good/bad.
+function posDelta(cur, prev, verbose){
+  if(cur==null||prev==null) return '<span style="color:var(--muted)">–</span>';
+  const d = cur - prev;                       // positive = ranking worse
+  if(Math.abs(d) < 0.05) return '<span class="delta">0.0</span>';
+  const word = verbose ? (d<0 ? ' better' : ' worse') : '';
+  return `<span class="delta ${d<0?'up':'down'}">${d>0?'+':'−'}${Math.abs(d).toFixed(1)}${word}</span>`;
+}
+const esc = s => String(s??'').replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ============================================================== charts ===
+// Hand-rolled SVG. One measure per plot, never two y-scales on one chart.
+function lineChart(el, series, opts={}){
+  const W=760, H=opts.height||190, P={t:10,r:14,b:24,l:50};
+  if(!series.length || !series[0].pts.length){
+    el.innerHTML = '<div class="empty">No data in this range.</div>'; return;
+  }
+  const all = series.flatMap(s=>s.pts);
+  const xs = series[0].pts.map(p=>p[0]);
+  let lo = Math.min(...all.map(p=>p[1])), hi = Math.max(...all.map(p=>p[1]));
+  if(opts.zeroBase) lo = 0;
+  if(hi===lo){ hi = lo + 1; }
+  const pad = (hi-lo)*0.08; hi+=pad; if(!opts.zeroBase) lo-=pad;
+  const inv = !!opts.invert;                  // position: lower is better
+  const X = i => P.l + (xs.length<2?0:i*(W-P.l-P.r)/(xs.length-1));
+  const Y = v => { const t=(v-lo)/(hi-lo); return P.t + (inv? t : 1-t)*(H-P.t-P.b); };
+
+  const ticks=[]; const n=4;
+  for(let i=0;i<=n;i++) ticks.push(lo + (hi-lo)*i/n);
+
+  let g = ticks.map(v=>`<line x1="${P.l}" x2="${W-P.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"
+      stroke="var(--grid)" stroke-width="1"/>
+    <text x="${P.l-8}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end" font-size="10"
+      fill="var(--muted)" font-variant-numeric="tabular-nums">${opts.fmtY? opts.fmtY(v): fmt(Math.round(v))}</text>`).join('');
+
+  const step = Math.max(1, Math.ceil(xs.length/6));
+  for(let i=0;i<xs.length;i+=step){
+    g += `<text x="${X(i).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="10"
+      fill="var(--muted)">${xs[i].slice(2,7)}</text>`;
+  }
+
+  let paths='';
+  series.forEach(s=>{
+    const d = s.pts.map((p,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(p[1]).toFixed(1)}`).join('');
+    if(s.fill){
+      paths += `<path d="${d}L${X(s.pts.length-1).toFixed(1)},${Y(inv?hi:lo).toFixed(1)}L${X(0).toFixed(1)},${Y(inv?hi:lo).toFixed(1)}Z"
+        fill="${s.fill}" stroke="none"/>`;
+    }
+    paths += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2"
+      stroke-linejoin="round" stroke-linecap="round"/>`;
+  });
+
+  el.innerHTML = `<div class="plot">
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label||'')}">
+      ${g}
+      <line x1="${P.l}" x2="${W-P.r}" y1="${H-P.b}" y2="${H-P.b}" stroke="var(--axis)" stroke-width="1"/>
+      ${paths}
+      <g id="cross" style="display:none">
+        <line y1="${P.t}" y2="${H-P.b}" stroke="var(--axis)" stroke-width="1"/>
+        ${series.map(s=>`<circle r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`).join('')}
+      </g>
+      <rect x="${P.l}" y="${P.t}" width="${W-P.l-P.r}" height="${H-P.t-P.b}" fill="transparent" id="hit"/>
+    </svg>
+    <div class="tip"></div>
+  </div>`;
+
+  const svg=el.querySelector('svg'), cross=el.querySelector('#cross'),
+        tip=el.querySelector('.tip'), hit=el.querySelector('#hit');
+  const circles=[...cross.querySelectorAll('circle')], vline=cross.querySelector('line');
+  hit.addEventListener('pointermove', ev=>{
+    const r=svg.getBoundingClientRect();
+    const px=(ev.clientX-r.left)/r.width*W;
+    let i=Math.round((px-P.l)/((W-P.l-P.r)/Math.max(1,xs.length-1)));
+    i=Math.max(0,Math.min(xs.length-1,i));
+    cross.style.display='';
+    vline.setAttribute('x1',X(i)); vline.setAttribute('x2',X(i));
+    series.forEach((s,k)=>{ circles[k].setAttribute('cx',X(i)); circles[k].setAttribute('cy',Y(s.pts[i][1])); });
+    tip.style.opacity=1;
+    tip.innerHTML = `<b>${xs[i]}</b>` + series.map(s=>
+      `<div style="margin-top:3px"><span class="swatch" style="background:${s.color}"></span>
+       ${esc(s.name)} <b>${opts.fmtTip? opts.fmtTip(s.pts[i][1]) : fmt(Math.round(s.pts[i][1]))}</b></div>`).join('');
+    const left = (X(i)/W)*r.width;
+    tip.style.left = Math.min(Math.max(8,left+12), r.width-tip.offsetWidth-8)+'px';
+    tip.style.top = '8px';
+  });
+  hit.addEventListener('pointerleave', ()=>{ cross.style.display='none'; tip.style.opacity=0; });
+}
+
+function barChart(el, rows, opts={}){
+  if(!rows.length){ el.innerHTML='<div class="empty">No data.</div>'; return; }
+  const max = Math.max(...rows.map(r=>r.v)) || 1;
+  el.innerHTML = `<div style="padding:4px 15px 14px">` + rows.map(r=>`
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin:7px 0">
+      <div style="min-width:0">
+        <div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.k)}</div>
+        <div style="height:7px;border-radius:3px;background:var(--s1);margin-top:4px;
+          width:${Math.max(0.6,r.v/max*100)}%"></div>
+      </div>
+      <div style="font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)">${fmt(r.v)}</div>
+    </div>`).join('') + `</div>`;
+}
+
+// Load health is a status readout, not a magnitude: on a healthy day every
+// value is 0, and a bar chart of zeros shows nothing. Status colour plus an
+// icon and a word, never colour alone.
+function healthList(el){
+  const rows = S.summary.properties.slice().sort((a,b)=>
+    (b.days_behind - a.days_behind) || (b.missing_days - a.missing_days));
+  el.innerHTML = `<div style="padding:2px 15px 14px">` + rows.map(p=>{
+    const stale = p.days_behind > 2, gaps = p.missing_days > 0;
+    const sev = stale ? 'critical' : gaps ? 'serious' : 'good';
+    const icon = stale ? '▲' : gaps ? '◆' : '●';
+    const word = stale ? `${p.days_behind}d behind`
+               : gaps  ? `${p.missing_days} day${p.missing_days>1?'s':''} missing`
+               : 'current';
+    return `<div style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+        gap:9px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--${sev});font-size:11px">${icon}</span>
+      <span style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+        title="${esc(p.site_url)}">${esc(p.label)}</span>
+      <span style="font-size:11.5px;color:var(--${sev==='good'?'muted':sev});
+        font-variant-numeric:tabular-nums;white-space:nowrap">${word}</span>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+// 7-day mean. Search Console traffic is strongly weekly; a raw daily line is
+// mostly weekday shape, which buries the trend the page exists to show.
+function smooth(pts, k=7){
+  if(pts.length < k) return pts;
+  const out=[];
+  for(let i=0;i<pts.length;i++){
+    const a=Math.max(0,i-k+1); let s=0,n=0;
+    for(let j=a;j<=i;j++){ if(pts[j][1]!=null){ s+=pts[j][1]; n++; } }
+    out.push([pts[i][0], n? s/n : null]);
+  }
+  return out;
+}
+
+// ================================================================ views ===
+function renderPropList(){
+  const el=$('#plist'); const w=String(S.win);
+  el.innerHTML = `<button data-slug="__all__" aria-label="All properties"
+      aria-current="${S.prop===null}">
+      <div class="pname">All properties</div>
+      <div class="pmeta">overview &amp; comparison</div>
+    </button>` +
+    S.summary.properties.map(p=>{
+      const d=p.windows[w]||{};
+      const dl=deltaHTML(d.clicks, d.clicks_prev);
+      const stale = p.days_behind > 2
+        ? `<span style="color:var(--serious)" title="Behind the newest loaded date">⚠ ${p.days_behind}d</span>` : '';
+      return `<button data-slug="${p.slug}" aria-current="${S.prop===p.slug}"
+        aria-label="${esc(p.label)}, ${fmt(d.clicks)} clicks">
+        <div class="pname">${esc(p.label)}${p.is_root?'<span class="rootbadge">CONTAINS OTHERS</span>':''}${
+          p.source==='search_console_api'?'<span class="rootbadge" title="Not in BigQuery yet — pulled live from the Search Console API">LIVE API</span>':''}</div>
+        <div class="pmeta"><span>${fmt(d.clicks)} clicks</span> ${dl} ${stale}</div>
+      </button>`;
+    }).join('');
+  el.onclick = ev => {
+    const b = ev.target.closest('button[data-slug]'); if(!b) return;
+    S.prop = b.dataset.slug === '__all__' ? null : b.dataset.slug;
+    S.openPage = null; S.q=''; render();
+  };
+  $('#propcount').textContent = `(${S.summary.properties.length})`;
+}
+
+function alertBanner(){
+  const a = S.summary.alerts;
+  const el = $('#alertbanner');
+  if(!a){ el.innerHTML=''; return; }
+  const c=a.counts.critical, w=a.counts.warning;
+  if(!c && !w){
+    el.innerHTML = `<div class="banner"><span style="color:var(--good)">●</span>
+      <div><b>All clear.</b> No property, page or query breached its threshold over the
+      last ${a.compare_days} days, and every property loaded on time.</div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="banner">
+    <span style="color:var(--${c?'critical':'serious'})">${c?'▲':'▲'}</span>
+    <div><b>${c} critical, ${w} warning</b> over the last ${a.compare_days} days vs the
+    ${a.compare_days} before. <a href="#" id="toalerts">Review them →</a></div></div>`;
+  $('#toalerts').onclick = e => { e.preventDefault(); S.prop=null; S.tab='alerts'; render(); };
+}
+
+function overview(){
+  const w=String(S.win);
+  const props = S.summary.properties;
+  const rows = props.map(p=>({p, d:p.windows[w]||{}}));
+
+  const nonRoot = rows.filter(r=>!r.p.is_root);
+  const totClicks = nonRoot.reduce((a,r)=>a+(r.d.clicks||0),0);
+  const rootRow = rows.find(r=>r.p.is_root);
+
+  const tiles = `<div class="tiles">
+    <div class="tile"><div class="k">Properties</div><div class="v">${props.length}</div>
+      <div class="d">${props.filter(p=>p.days_behind<=2).length} loaded through ${S.summary.latest_date}</div></div>
+    <div class="tile"><div class="k">Clicks · ${rootRow?esc(rootRow.p.label):'root'}</div>
+      <div class="v">${fmt(rootRow?rootRow.d.clicks:null)}</div>
+      <div class="d">${rootRow?deltaHTML(rootRow.d.clicks,rootRow.d.clicks_prev):''} vs prior ${S.win}d</div></div>
+    <div class="tile"><div class="k">Clicks · sub-properties</div><div class="v">${fmt(totClicks)}</div>
+      <div class="d">sum of the ${nonRoot.length} non-root properties</div></div>
+    <div class="tile"><div class="k">Alerts</div>
+      <div class="v">${S.summary.alerts? S.summary.alerts.alerts.length : '–'}</div>
+      <div class="d">${S.summary.alerts? S.summary.alerts.counts.critical+' critical' : 'not yet run'}</div></div>
+  </div>`;
+
+  const cmp = nonRoot.slice().sort((a,b)=>(b.d.clicks||0)-(a.d.clicks||0))
+    .map(r=>({k:r.p.label, v:r.d.clicks||0}));
+
+  const table = `<div class="card"><h2>All properties
+      <span class="note">last ${S.win} days vs the ${S.win} before · page grain, matches the Search Console UI</span></h2>
+    <div class="tablewrap"><table><thead><tr>
+      <th>Property</th><th class="num">Clicks</th><th class="num">Δ</th>
+      <th class="num">Impressions</th><th class="num">Δ</th>
+      <th class="num">CTR</th><th class="num">Avg pos</th><th class="num">Δ</th>
+      <th class="num">Pages</th><th class="num">Data from</th>
+    </tr></thead><tbody>` +
+    rows.sort((a,b)=>(b.d.clicks||0)-(a.d.clicks||0)).map(({p,d})=>`
+      <tr class="clickable" data-slug="${p.slug}">
+        <td class="ent">${esc(p.label)}${p.is_root?'<span class="rootbadge">SUPERSET</span>':''}${
+          p.source==='search_console_api'?'<span class="rootbadge">LIVE API</span>':''}
+          <div class="sub">${esc(p.site_url)}</div></td>
+        <td class="num">${fmt(d.clicks)}</td><td class="num">${deltaHTML(d.clicks,d.clicks_prev)}</td>
+        <td class="num">${fmt(d.impressions)}</td><td class="num">${deltaHTML(d.impressions,d.impressions_prev)}</td>
+        <td class="num">${d.impressions? (d.clicks/d.impressions*100).toFixed(2)+'%':'–'}</td>
+        <td class="num">${fmt1(d.position)}</td><td class="num">${posDelta(d.position,d.position_prev)}</td>
+        <td class="num">${fmt(d.pages)}</td>
+        <td class="num" style="color:var(--muted)">${p.earliest_date}</td>
+      </tr>`).join('') + `</tbody></table></div></div>`;
+
+  return `${tiles}
+    <div class="chartgrid">
+      <div class="card"><figure><figcaption>Clicks by property
+        <span class="hint">last ${S.win}d · root excluded</span></figcaption>
+        <div id="cmpbar"></div></figure></div>
+      <div class="card"><figure><figcaption>Load health
+        <span class="hint">against ${S.summary.latest_date}</span></figcaption>
+        <div id="health"></div></figure></div>
+    </div>
+    ${table}`;
+}
+
+function propView(){
+  const p = S.summary.properties.find(x=>x.slug===S.prop);
+  const d = p.windows[String(S.win)]||{};
+  const pd = S.propData;
+
+  const tiles = `<div class="tiles">
+    <div class="tile"><div class="k">Clicks</div><div class="v">${fmt(d.clicks)}</div>
+      <div class="d">${deltaHTML(d.clicks,d.clicks_prev)} from ${fmt(d.clicks_prev)}</div></div>
+    <div class="tile"><div class="k">Impressions</div><div class="v">${fmt(d.impressions)}</div>
+      <div class="d">${deltaHTML(d.impressions,d.impressions_prev)} from ${fmt(d.impressions_prev)}</div></div>
+    <div class="tile"><div class="k">CTR</div>
+      <div class="v">${d.impressions?(d.clicks/d.impressions*100).toFixed(2)+'%':'–'}</div>
+      <div class="d">${d.impressions_prev?(d.clicks_prev/d.impressions_prev*100).toFixed(2)+'% prior':''}</div></div>
+    <div class="tile"><div class="k">Avg position</div><div class="v">${fmt1(d.position)}</div>
+      <div class="d">${posDelta(d.position,d.position_prev,true)} than ${fmt1(d.position_prev)} · lower is better</div></div>
+    <div class="tile"><div class="k">Pages with traffic</div><div class="v">${fmt(d.pages)}</div>
+      <div class="d">in the last ${S.win} days</div></div>
+  </div>`;
+
+  const rangeSeg = [90,180,365,9999].map(r=>
+    `<button data-range="${r}" aria-pressed="${S.range===r}">${r===9999?'All':r+'d'}</button>`).join('');
+
+  return `${tiles}
+    <div class="card" style="margin-bottom:16px">
+      <h2>Trend <span class="note">page grain · ${esc(pd.label)}</span>
+        <span style="margin-left:auto;display:flex;gap:8px">
+          <span class="seg" id="rangeseg">${rangeSeg}</span>
+          <span class="seg" id="smoothseg">
+            <button data-smooth="1" aria-pressed="${S.smooth}">7-day avg</button>
+            <button data-smooth="0" aria-pressed="${!S.smooth}">Daily</button>
+          </span>
+        </span></h2>
+      <div class="chartgrid" style="margin:0;padding:12px;gap:12px">
+        <figure><figcaption>Clicks</figcaption><div id="c_clicks"></div></figure>
+        <figure><figcaption>Impressions</figcaption><div id="c_impr"></div></figure>
+        <figure><figcaption>Average position <span class="hint">lower is better — axis inverted</span></figcaption>
+          <div id="c_pos"></div></figure>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button data-tab="pages" aria-selected="${S.tab==='pages'}">Pages</button>
+      <button data-tab="queries" aria-selected="${S.tab==='queries'}">Queries</button>
+      <button data-tab="breakdown" aria-selected="${S.tab==='breakdown'}">Country &amp; device</button>
+      <button data-tab="alerts" aria-selected="${S.tab==='alerts'}">Alerts</button>
+    </div>
+    <div id="tabbody"></div>`;
+}
+
+function entityTable(kind){
+  const pd=S.propData, w=String(S.win);
+  const rows = (kind==='pages'? pd.pages : pd.queries)[w] || [];
+  if(!rows.length){
+    return `<div class="card"><div class="empty">${kind==='queries'
+      ? 'No query-grain data loaded for this property yet.'
+      : 'No pages with traffic in this window.'}</div></div>`;
+  }
+  const q=S.q.toLowerCase();
+  let list = q ? rows.filter(r=>String(r.k).toLowerCase().includes(q)) : rows.slice();
+  const {key,dir}=S.sort;
+  list.sort((a,b)=>{
+    const av = key==='dc' ? pctOf(a.c,a.c0) : key==='k' ? String(a.k) : a[key];
+    const bv = key==='dc' ? pctOf(b.c,b.c0) : key==='k' ? String(b.k) : b[key];
+    if(av==null) return 1; if(bv==null) return -1;
+    return (av>bv?1:av<bv?-1:0)*dir;
+  });
+  const shown = list.slice(0,300);
+  const max = Math.max(...shown.map(r=>r.c), 1);
+
+  const caveat = kind==='queries'
+    ? `<p class="caveat">Search Console omits anonymised queries from every
+       query-dimensioned request, so these clicks sum to well below the property total —
+       one probed day was 66% short. Ranking and movement are sound; the absolute
+       numbers are not. Page figures on the other tab are exact.</p>` : '';
+
+  const th = (k,lbl,cls='num') =>
+    `<th class="${cls}" data-key="${k}" ${S.sort.key===k?`aria-sort="${dir<0?'descending':'ascending'}"`:''}>${lbl}</th>`;
+
+  return `<div class="card">
+    <h2>${kind==='pages'?'Pages':'Queries'}
+      <span class="note">last ${S.win} days vs the ${S.win} before · ${fmt(list.length)} rows${list.length>300?' (top 300 shown)':''}</span></h2>
+    <div class="body" style="padding-bottom:0">
+      <div class="filters">
+        <input type="search" id="search" placeholder="Filter ${kind}…" value="${esc(S.q)}">
+      </div>
+    </div>
+    <div class="tablewrap"><table><thead><tr>
+      ${th('k', kind==='pages'?'Page':'Query','')}
+      ${th('c','Clicks')}${th('dc','Δ clicks')}${th('i','Impressions')}
+      <th class="num">CTR</th>${th('p','Avg pos')}<th class="num">Δ pos</th>
+    </tr></thead><tbody>` +
+    shown.map(r=>{
+      const isOpen = kind==='pages' && S.openPage===r.k;
+      const drill = pd.page_queries && pd.page_queries[r.k];
+      const label = kind==='pages' ? String(r.k).replace(pd.site_url,'') || '/' : r.k;
+      let out = `<tr class="${kind==='pages'&&drill?'clickable':''}" data-key="${esc(r.k)}">
+        <td class="ent" title="${esc(r.k)}">${esc(label)}
+          ${kind==='pages'&&drill?'<span style="color:var(--muted)">'+(isOpen?'▾':'▸')+'</span>':''}
+          <span class="bar" style="width:${(r.c/max*100).toFixed(1)}%"></span></td>
+        <td class="num">${fmt(r.c)}</td>
+        <td class="num">${deltaHTML(r.c,r.c0)}<div class="sub" style="color:var(--muted);font-size:11px">${fmt(r.c0)}</div></td>
+        <td class="num">${fmt(r.i)}</td>
+        <td class="num">${r.i?(r.c/r.i*100).toFixed(2)+'%':'–'}</td>
+        <td class="num">${fmt1(r.p)}</td>
+        <td class="num">${posDelta(r.p,r.p0)}</td></tr>`;
+      if(isOpen && drill){
+        out += `<tr><td colspan="7" style="background:var(--surface-2);padding:0">
+          <div style="padding:9px 14px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">
+              Top queries for this page · last 28 days · anonymised queries excluded</div>
+            <table style="font-size:12px"><tbody>` +
+            drill.map(([q,c,i,p])=>`<tr><td class="ent">${esc(q)}</td>
+              <td class="num">${fmt(c)} clicks</td><td class="num">${fmt(i)} impr</td>
+              <td class="num">pos ${fmt1(p)}</td></tr>`).join('') +
+            `</tbody></table></div></td></tr>`;
+      }
+      return out;
+    }).join('') + `</tbody></table></div>${caveat}<div style="height:12px"></div></div>`;
+}
+
+function breakdownView(){
+  const pd=S.propData;
+  if(!pd.country.length && !pd.device.length)
+    return `<div class="card"><div class="empty">No query-grain data loaded for this property yet.</div></div>`;
+  return `<div class="chartgrid">
+    <div class="card"><figure><figcaption>Clicks by country
+      <span class="hint">last 28d · top 25</span></figcaption><div id="bd_country"></div></figure>
+      <p class="caveat" style="padding-bottom:12px">From the query-grain table, so these are
+      shares rather than totals.</p></div>
+    <div class="card"><figure><figcaption>Clicks by device
+      <span class="hint">last 28d</span></figcaption><div id="bd_device"></div></figure></div>
+  </div>`;
+}
+
+function alertsView(scopeSite){
+  const a = S.summary.alerts;
+  if(!a) return `<div class="card"><div class="empty">Alerting has not run yet.</div></div>`;
+  let list = a.alerts;
+  if(scopeSite) list = list.filter(x=>x.site_url===scopeSite);
+  if(!list.length) return `<div class="card"><h2>Alerts</h2>
+    <div class="empty">Nothing breached a threshold${scopeSite?' for this property':''}
+    over the last ${a.compare_days} days.</div></div>`;
+
+  const icon = {critical:'▲', warning:'◆', info:'●'};
+  const groups = {pipeline:'Pipeline health', property:'Property level', page:'Pages', query:'Queries'};
+  let out='';
+  for(const [scope,title] of Object.entries(groups)){
+    const items = list.filter(x=>x.scope===scope);
+    if(!items.length) continue;
+    out += `<div class="card" style="margin-bottom:12px"><h2>${title}
+      <span class="note">${items.length}</span></h2>` +
+      items.map(x=>{
+        let ent = String(x.entity);
+        if(x.scope==='page') ent = ent.replace(x.site_url,'') || '/';
+        return `<div class="alert">
+          <span class="sev ${x.severity}">${icon[x.severity]} ${x.severity.toUpperCase()}</span>
+          <div><div class="ent">${esc(ent)}</div>
+            <div class="msg">${esc(x.message)}</div>
+            ${scopeSite?'':`<div class="prop">${esc(x.site_url)}</div>`}</div></div>`;
+      }).join('') + `</div>`;
+  }
+  return `<div class="banner"><span>⚙</span><div>Thresholds live in
+    <b>alerts.config.json</b> in the repo — there is no server to save settings to.
+    Current window: last <b>${a.compare_days} days</b> vs the ${a.compare_days} before.</div></div>` + out;
+}
+
+// ================================================================ paint ===
+function render(){
+  const m=$('#main');
+  if(S.prop===null){
+    m.innerHTML = overview();
+    const w=String(S.win);
+    const rows = S.summary.properties.filter(p=>!p.is_root)
+      .map(p=>({k:p.label, v:(p.windows[w]||{}).clicks||0}))
+      .sort((a,b)=>b.v-a.v);
+    barChart($('#cmpbar'), rows);
+    healthList($('#health'));
+    m.querySelectorAll('tr[data-slug]').forEach(tr=>tr.onclick=()=>{
+      S.prop=tr.dataset.slug; S.openPage=null; render();
+    });
+    if(S.tab==='alerts'){
+      m.insertAdjacentHTML('afterbegin','<div id="ov_alerts"></div>');
+      $('#ov_alerts').innerHTML = alertsView(null);
+    }
+    paintFooter(); return;
+  }
+
+  if(!S.propData || S.propData.slug!==S.prop){ loadProp(); return; }
+  m.innerHTML = propView();
+
+  // --- trend charts ------------------------------------------------------
+  const daily = S.propData.daily.slice(S.range===9999? 0 : -S.range);
+  const mk = (i, {invert=false, zeroBase=true, fmtY, fmtTip}={}) => {
+    let pts = daily.map(r=>[r[0], r[i]]).filter(r=>r[1]!=null);
+    if(S.smooth) pts = smooth(pts);
+    return pts;
+  };
+  lineChart($('#c_clicks'), [{name:'Clicks', color:'var(--s1)', fill:'var(--fill-1)', pts:mk(1)}],
+    {zeroBase:true, label:'Daily clicks'});
+  lineChart($('#c_impr'), [{name:'Impressions', color:'var(--s1)', fill:'var(--fill-1)', pts:mk(2)}],
+    {zeroBase:true, label:'Daily impressions'});
+  lineChart($('#c_pos'), [{name:'Avg position', color:'var(--s1)', pts:mk(3)}],
+    {invert:true, zeroBase:false, label:'Average position',
+     fmtY:v=>v.toFixed(1), fmtTip:v=>v.toFixed(1)});
+
+  $('#rangeseg').onclick = ev=>{ const b=ev.target.closest('button'); if(!b)return;
+    S.range=+b.dataset.range; render(); };
+  $('#smoothseg').onclick = ev=>{ const b=ev.target.closest('button'); if(!b)return;
+    S.smooth = b.dataset.smooth==='1'; render(); };
+
+  // --- tab body ----------------------------------------------------------
+  const tb=$('#tabbody');
+  if(S.tab==='pages' || S.tab==='queries'){
+    tb.innerHTML = entityTable(S.tab);
+    tb.querySelectorAll('th[data-key]').forEach(th=>th.onclick=()=>{
+      const k=th.dataset.key;
+      S.sort = S.sort.key===k ? {key:k,dir:-S.sort.dir} : {key:k,dir:k==='k'?1:-1};
+      render();
+    });
+    const inp=tb.querySelector('#search');
+    if(inp){ inp.oninput=()=>{ S.q=inp.value; const pos=inp.selectionStart; render();
+      const n=$('#search'); if(n){ n.focus(); n.setSelectionRange(pos,pos);} }; }
+    if(S.tab==='pages'){
+      tb.querySelectorAll('tr.clickable[data-key]').forEach(tr=>tr.onclick=()=>{
+        S.openPage = S.openPage===tr.dataset.key ? null : tr.dataset.key; render();
+      });
+    }
+  } else if(S.tab==='breakdown'){
+    tb.innerHTML = breakdownView();
+    if($('#bd_country')) barChart($('#bd_country'), S.propData.country.map(r=>({k:r.k,v:r.c})));
+    if($('#bd_device')) barChart($('#bd_device'), S.propData.device.map(r=>({k:r.k,v:r.c})));
+  } else {
+    tb.innerHTML = alertsView(S.propData.site_url);
+  }
+
+  $('#tabs').onclick = ev=>{ const b=ev.target.closest('button[data-tab]'); if(!b)return;
+    S.tab=b.dataset.tab; S.q=''; render(); };
+
+  paintFooter();
+}
+
+function paintFooter(){
+  const s=S.summary;
+  const live = (s.api_fallback_used||[]).length;
+  $('#foot').innerHTML = (live ? `<b>${live} propert${live===1?'y is':'ies are'}</b>
+    not in BigQuery yet and shown from a live Search Console API pull, marked
+    <span class="rootbadge">LIVE API</span>. They carry only the rolling ~16-month
+    window and no stored history until the backfill reaches them.<br>` : '') + `
+    Page figures come from a page-grain Search Console pull and match the UI's Pages report exactly.
+    Query, country and device figures come from a query-grain pull, which Search Console strips of
+    anonymised queries — they rank correctly but under-count.<br>
+    Page history starts ${s.properties.length? s.properties.map(p=>p.earliest_date).sort()[0] : '–'};
+    the API serves only a rolling ~16 months and nothing earlier can be recovered.
+    Data through <b>${s.latest_date}</b>, built ${s.generated_at.replace('T',' ').replace('+00:00',' UTC')}.`;
+}
+
+// ================================================================= load ===
+async function loadProp(){
+  $('#main').innerHTML = '<div class="spinner">Loading property…</div>';
+  try{
+    const r = await fetch(`data/prop_${S.prop}.json`, {cache:'no-cache'});
+    if(!r.ok) throw new Error(r.status);
+    S.propData = await r.json();
+    S.propData.slug = S.prop;
+    render();
+  }catch(e){
+    $('#main').innerHTML = `<div class="card"><div class="empty">
+      Could not load <code>data/prop_${esc(S.prop)}.json</code> (${esc(e.message)}).</div></div>`;
+  }
+}
+
+function initTheme(){
+  const saved = (()=>{ try{ return localStorage.getItem('gscm-theme'); }catch(e){ return null; } })();
+  if(saved) document.documentElement.dataset.theme = saved;
+  $('#themebtn').onclick = ()=>{
+    const cur = document.documentElement.dataset.theme
+      || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light');
+    const next = cur==='dark' ? 'light':'dark';
+    document.documentElement.dataset.theme = next;
+    try{ localStorage.setItem('gscm-theme', next); }catch(e){}
+    render();
+  };
+}
+
+(async function(){
+  initTheme();
+  try{
+    const r = await fetch('data/summary.json', {cache:'no-cache'});
+    S.summary = await r.json();
+  }catch(e){
+    $('#main').innerHTML = `<div class="card"><div class="empty">
+      Could not load <code>data/summary.json</code>. Run <code>build_payload.py</code> first.</div></div>`;
+    return;
+  }
+  S.win = S.summary.windows.includes(28) ? 28 : S.summary.windows[0];
+  $('#winseg').innerHTML = S.summary.windows.map(w=>
+    `<button data-win="${w}" aria-pressed="${w===S.win}">${w}d</button>`).join('');
+  $('#winseg').onclick = ev=>{ const b=ev.target.closest('button'); if(!b)return;
+    S.win=+b.dataset.win;
+    $('#winseg').querySelectorAll('button').forEach(x=>
+      x.setAttribute('aria-pressed', +x.dataset.win===S.win));
+    renderPropList(); render();
+  };
+  $('#subtitle').textContent =
+    `${S.summary.properties.length} properties · data through ${S.summary.latest_date}`;
+  alertBanner();
+  renderPropList();
+  render();
+})();
+</script>
+</body>
+</html>

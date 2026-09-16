@@ -1,0 +1,1270 @@
+{
+ "generated_at": "2026-09-16T07:44:43+00:00",
+ "latest_date": "2026-09-13",
+ "windows": [
+  7,
+  28,
+  90
+ ],
+ "root_property": "https://www.manageengine.com/",
+ "properties": [
+  {
+   "site_url": "https://www.manageengine.com/",
+   "slug": "www-manageengine-com",
+   "label": "manageengine.com (all)",
+   "is_root": true,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:28:52.485562+00:00",
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 313801,
+     "clicks_prev": 326157,
+     "impressions": 18394770,
+     "impressions_prev": 18484337,
+     "position": 12.29,
+     "position_prev": 11.98,
+     "pages": 22429
+    },
+    "7": {
+     "clicks": 78242,
+     "clicks_prev": 79816,
+     "impressions": 4720297,
+     "impressions_prev": 4876514,
+     "position": 10.52,
+     "position_prev": 11.03,
+     "pages": 12764
+    },
+    "90": {
+     "clicks": 1047363,
+     "clicks_prev": 1125387,
+     "impressions": 60861365,
+     "impressions_prev": 73878810,
+     "position": 11.71,
+     "position_prev": 10.48,
+     "pages": 36455
+    }
+   }
+  },
+  {
+   "site_url": "https://pitstop.manageengine.com/",
+   "slug": "pitstop-manageengine-com",
+   "label": "pitstop.manageengine.com",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:28:59.421181+00:00",
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 38800,
+     "clicks_prev": 40618,
+     "impressions": 2357920,
+     "impressions_prev": 2397050,
+     "position": 10.47,
+     "position_prev": 9.77,
+     "pages": 17244
+    },
+    "7": {
+     "clicks": 9935,
+     "clicks_prev": 9519,
+     "impressions": 614395,
+     "impressions_prev": 639070,
+     "position": 7.5,
+     "position_prev": 8.4,
+     "pages": 10504
+    },
+    "90": {
+     "clicks": 143476,
+     "clicks_prev": 169731,
+     "impressions": 8717850,
+     "impressions_prev": 10480125,
+     "position": 9.08,
+     "position_prev": 7.79,
+     "pages": 24501
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+   "slug": "www-manageengine-com-products-active-directory-audit",
+   "label": "active-directory-audit",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:33:51.840766+00:00",
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 17718,
+     "clicks_prev": 17555,
+     "impressions": 1631158,
+     "impressions_prev": 1657693,
+     "position": 11.87,
+     "position_prev": 10.98,
+     "pages": 2318
+    },
+    "7": {
+     "clicks": 4048,
+     "clicks_prev": 5142,
+     "impressions": 390906,
+     "impressions_prev": 422501,
+     "position": 9.36,
+     "position_prev": 9.34,
+     "pages": 2051
+    },
+    "90": {
+     "clicks": 57004,
+     "clicks_prev": 61343,
+     "impressions": 5685954,
+     "impressions_prev": 7296114,
+     "position": 10.58,
+     "position_prev": 8.68,
+     "pages": 2568
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/products/service-desk/",
+   "slug": "www-manageengine-com-products-service-desk",
+   "label": "service-desk",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": null,
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "search_console_api",
+   "windows": {
+    "7": {
+     "clicks": 4085,
+     "clicks_prev": 4242,
+     "impressions": 359836,
+     "impressions_prev": 396990,
+     "position": 15.42,
+     "position_prev": 15.92,
+     "pages": 425
+    },
+    "28": {
+     "clicks": 16585,
+     "clicks_prev": 17646,
+     "impressions": 1532196,
+     "impressions_prev": 1704509,
+     "position": 17.43,
+     "position_prev": 15.7,
+     "pages": 490
+    },
+    "90": {
+     "clicks": 56464,
+     "clicks_prev": 61354,
+     "impressions": 5476882,
+     "impressions_prev": 8168376,
+     "position": 15.93,
+     "position_prev": 13.44,
+     "pages": 494
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/products/ad-manager/",
+   "slug": "www-manageengine-com-products-ad-manager",
+   "label": "ad-manager",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": null,
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "search_console_api",
+   "windows": {
+    "7": {
+     "clicks": 3894,
+     "clicks_prev": 4204,
+     "impressions": 295826,
+     "impressions_prev": 308126,
+     "position": 7.9,
+     "position_prev": 8.51,
+     "pages": 453
+    },
+    "28": {
+     "clicks": 16405,
+     "clicks_prev": 17932,
+     "impressions": 1227982,
+     "impressions_prev": 1304354,
+     "position": 10.31,
+     "position_prev": 10.05,
+     "pages": 499
+    },
+    "90": {
+     "clicks": 56647,
+     "clicks_prev": 59197,
+     "impressions": 4301605,
+     "impressions_prev": 5002436,
+     "position": 9.64,
+     "position_prev": 8.49,
+     "pages": 499
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/products/eventlog/",
+   "slug": "www-manageengine-com-products-eventlog",
+   "label": "eventlog",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": null,
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "search_console_api",
+   "windows": {
+    "7": {
+     "clicks": 2762,
+     "clicks_prev": 2906,
+     "impressions": 436548,
+     "impressions_prev": 459020,
+     "position": 8.29,
+     "position_prev": 8.63,
+     "pages": 383
+    },
+    "28": {
+     "clicks": 11262,
+     "clicks_prev": 13587,
+     "impressions": 1772914,
+     "impressions_prev": 2065065,
+     "position": 10.15,
+     "position_prev": 10.02,
+     "pages": 469
+    },
+    "90": {
+     "clicks": 42510,
+     "clicks_prev": 51264,
+     "impressions": 6525946,
+     "impressions_prev": 8955472,
+     "position": 9.53,
+     "position_prev": 7.78,
+     "pages": 490
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/log-management/",
+   "slug": "www-manageengine-com-log-management",
+   "label": "log-management",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:32:09.855118+00:00",
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 10823,
+     "clicks_prev": 11591,
+     "impressions": 1026968,
+     "impressions_prev": 1007394,
+     "position": 16.7,
+     "position_prev": 15.86,
+     "pages": 4547
+    },
+    "7": {
+     "clicks": 2548,
+     "clicks_prev": 2706,
+     "impressions": 262142,
+     "impressions_prev": 259244,
+     "position": 13.35,
+     "position_prev": 14.41,
+     "pages": 3675
+    },
+    "90": {
+     "clicks": 36003,
+     "clicks_prev": 39345,
+     "impressions": 3501515,
+     "impressions_prev": 5590801,
+     "position": 15.33,
+     "position_prev": 11.83,
+     "pages": 5386
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/products/self-service-password/",
+   "slug": "www-manageengine-com-products-self-service-password",
+   "label": "self-service-password",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": null,
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "search_console_api",
+   "windows": {
+    "7": {
+     "clicks": 2153,
+     "clicks_prev": 2369,
+     "impressions": 165724,
+     "impressions_prev": 166861,
+     "position": 10.61,
+     "position_prev": 11.46,
+     "pages": 400
+    },
+    "28": {
+     "clicks": 9331,
+     "clicks_prev": 9477,
+     "impressions": 675226,
+     "impressions_prev": 683042,
+     "position": 13.29,
+     "position_prev": 12.43,
+     "pages": 489
+    },
+    "90": {
+     "clicks": 31365,
+     "clicks_prev": 33813,
+     "impressions": 2280487,
+     "impressions_prev": 4550166,
+     "position": 12.05,
+     "position_prev": 9.35,
+     "pages": 496
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/data-security/",
+   "slug": "www-manageengine-com-data-security",
+   "label": "data-security",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:22:35.656217+00:00",
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 1948,
+     "clicks_prev": 1978,
+     "impressions": 294786,
+     "impressions_prev": 291748,
+     "position": 28.27,
+     "position_prev": 26.7,
+     "pages": 526
+    },
+    "7": {
+     "clicks": 481,
+     "clicks_prev": 488,
+     "impressions": 68610,
+     "impressions_prev": 70431,
+     "position": 24.15,
+     "position_prev": 26.32,
+     "pages": 470
+    },
+    "90": {
+     "clicks": 6107,
+     "clicks_prev": 6081,
+     "impressions": 988020,
+     "impressions_prev": 1099099,
+     "position": 25.28,
+     "position_prev": 20.37,
+     "pages": 555
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/products/exchange-reports/",
+   "slug": "www-manageengine-com-products-exchange-reports",
+   "label": "exchange-reports",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": null,
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "search_console_api",
+   "windows": {
+    "7": {
+     "clicks": 233,
+     "clicks_prev": 217,
+     "impressions": 15638,
+     "impressions_prev": 16976,
+     "position": 12.55,
+     "position_prev": 13.33,
+     "pages": 104
+    },
+    "28": {
+     "clicks": 871,
+     "clicks_prev": 1078,
+     "impressions": 69968,
+     "impressions_prev": 78876,
+     "position": 16.94,
+     "position_prev": 15.08,
+     "pages": 185
+    },
+    "90": {
+     "clicks": 3227,
+     "clicks_prev": 3993,
+     "impressions": 254876,
+     "impressions_prev": 322285,
+     "position": 14.82,
+     "position_prev": 11.42,
+     "pages": 313
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/cloud-siem/",
+   "slug": "www-manageengine-com-cloud-siem",
+   "label": "cloud-siem",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:24:02.960143+00:00",
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 738,
+     "clicks_prev": 881,
+     "impressions": 32611,
+     "impressions_prev": 27257,
+     "position": 14.85,
+     "position_prev": 13.45,
+     "pages": 61
+    },
+    "7": {
+     "clicks": 192,
+     "clicks_prev": 175,
+     "impressions": 8263,
+     "impressions_prev": 7768,
+     "position": 13.51,
+     "position_prev": 12.13,
+     "pages": 52
+    },
+    "90": {
+     "clicks": 2671,
+     "clicks_prev": 3043,
+     "impressions": 93051,
+     "impressions_prev": 97245,
+     "position": 13.51,
+     "position_prev": 12.82,
+     "pages": 66
+    }
+   }
+  },
+  {
+   "site_url": "https://www.manageengine.com/endpoint-dlp/",
+   "slug": "www-manageengine-com-endpoint-dlp",
+   "label": "endpoint-dlp",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:29:54.520258+00:00",
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 652,
+     "clicks_prev": 616,
+     "impressions": 44010,
+     "impressions_prev": 37577,
+     "position": 23.3,
+     "position_prev": 17.5,
+     "pages": 190
+    },
+    "7": {
+     "clicks": 160,
+     "clicks_prev": 164,
+     "impressions": 11307,
+     "impressions_prev": 9889,
+     "position": 19.61,
+     "position_prev": 19.58,
+     "pages": 171
+    },
+    "90": {
+     "clicks": 1989,
+     "clicks_prev": 2068,
+     "impressions": 133404,
+     "impressions_prev": 157745,
+     "position": 20.03,
+     "position_prev": 15.94,
+     "pages": 210
+    }
+   }
+  },
+  {
+   "site_url": "https://demo.adauditplus.com/",
+   "slug": "demo-adauditplus-com",
+   "label": "demo.adauditplus.com",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:22:32.541792+00:00",
+   "days_present": 498,
+   "days_spanned": 498,
+   "missing_days": 0,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 370,
+     "clicks_prev": 427,
+     "impressions": 10087,
+     "impressions_prev": 9395,
+     "position": 7.97,
+     "position_prev": 8.19,
+     "pages": 7
+    },
+    "7": {
+     "clicks": 71,
+     "clicks_prev": 100,
+     "impressions": 2373,
+     "impressions_prev": 2883,
+     "position": 8.01,
+     "position_prev": 7.41,
+     "pages": 6
+    },
+    "90": {
+     "clicks": 1305,
+     "clicks_prev": 1343,
+     "impressions": 32805,
+     "impressions_prev": 32758,
+     "position": 7.78,
+     "position_prev": 7.85,
+     "pages": 8
+    }
+   }
+  },
+  {
+   "site_url": "https://blogs.manageengine.com/",
+   "slug": "blogs-manageengine-com",
+   "label": "blogs.manageengine.com",
+   "is_root": false,
+   "latest_date": "2026-09-13",
+   "earliest_date": "2025-05-04",
+   "days_behind": 0,
+   "last_loaded_at": "2026-09-16T07:24:02.629155+00:00",
+   "days_present": 458,
+   "days_spanned": 498,
+   "missing_days": 40,
+   "source": "bigquery",
+   "windows": {
+    "28": {
+     "clicks": 0,
+     "clicks_prev": 0,
+     "impressions": 55,
+     "impressions_prev": 29,
+     "position": 7.84,
+     "position_prev": 22.41,
+     "pages": 17
+    },
+    "7": {
+     "clicks": 0,
+     "clicks_prev": 0,
+     "impressions": 13,
+     "impressions_prev": 11,
+     "position": 3.85,
+     "position_prev": 7.45,
+     "pages": 8
+    },
+    "90": {
+     "clicks": 0,
+     "clicks_prev": 4,
+     "impressions": 122,
+     "impressions_prev": 1679,
+     "position": 10.28,
+     "position_prev": 18.98,
+     "pages": 38
+    }
+   }
+  }
+ ],
+ "has_query_grain": true,
+ "api_fallback_used": [
+  "https://www.manageengine.com/products/ad-manager/",
+  "https://www.manageengine.com/products/eventlog/",
+  "https://www.manageengine.com/products/exchange-reports/",
+  "https://www.manageengine.com/products/self-service-password/",
+  "https://www.manageengine.com/products/service-desk/"
+ ],
+ "notes": {
+  "overlap": "manageengine.com is a URL-prefix property containing the product properties below it. Property figures must not be added together.",
+  "query_grain": "Query-level clicks and impressions exclude anonymised queries, which Search Console omits entirely from any query-dimensioned request. They rank reliably but under-count badly -- one probed day showed 66% of clicks missing. Page figures come from a separate page-grain pull and are correct.",
+  "history": "Page-grain history starts 2025-04-29; the Search Console API serves only a rolling ~16 months and nothing earlier can ever be recovered. ADAP has 2022-2025 history from an older export that under-counts, shown separately and never spliced on."
+ },
+ "alerts": {
+  "generated_at": "2026-09-16T07:47:18+00:00",
+  "latest_date": "2026-09-13",
+  "compare_days": 7,
+  "thresholds": {
+   "property": {
+    "clicks_drop_pct": 20,
+    "clicks_drop_min_abs": 50,
+    "impressions_drop_pct": 25,
+    "impressions_drop_min_abs": 2000,
+    "position_worsen_by": 1.5
+   },
+   "decay": {
+    "compare_to_days_ago": 91,
+    "clicks_drop_pct": 40,
+    "clicks_drop_min_abs": 200,
+    "impressions_drop_pct": 45,
+    "impressions_drop_min_abs": 20000,
+    "dormant_min_prior_clicks": 50,
+    "_note": "Last 28 days vs the 28 days ending a quarter ago. A week-on-week check cannot see a slow bleed: blogs.manageengine.com fell from 7,684 clicks/month to 0 across nine months without any single week breaching a threshold."
+   },
+   "page": {
+    "clicks_drop_pct": 35,
+    "clicks_drop_min_abs": 20,
+    "position_worsen_by": 3.0,
+    "position_min_impressions": 500,
+    "max_alerts": 15
+   },
+   "query": {
+    "clicks_drop_pct": 40,
+    "clicks_drop_min_abs": 15,
+    "position_worsen_by": 3.0,
+    "position_min_impressions": 300,
+    "max_alerts": 15
+   },
+   "_note": "Minimum absolute movements exist because a percentage on a small base is noise: a page going 3 clicks -> 1 is a 67% drop and means nothing."
+  },
+  "counts": {
+   "critical": 3,
+   "warning": 47,
+   "info": 0
+  },
+  "alerts": [
+   {
+    "severity": "critical",
+    "scope": "page",
+    "site_url": "https://pitstop.manageengine.com/",
+    "entity": "https://pitstop.manageengine.com/portal/en/kb/articles/how-to-upgrade-adaudit-plus",
+    "metric": "clicks",
+    "current": 0,
+    "previous": 21,
+    "delta_pct": -100.0,
+    "message": "Clicks 21 -> 0 (-100.0%) -- now zero",
+    "lost_clicks": 21
+   },
+   {
+    "severity": "critical",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/desktop-central/help/device-onboarding/desktop-central-agent-migration-from-op-to-cloud.html",
+    "metric": "clicks",
+    "current": 0,
+    "previous": 30,
+    "delta_pct": -100.0,
+    "message": "Clicks 30 -> 0 (-100.0%) -- now zero",
+    "lost_clicks": 30
+   },
+   {
+    "severity": "critical",
+    "scope": "pipeline",
+    "site_url": "https://www.manageengine.com/products/eventlog/",
+    "entity": "https://www.manageengine.com/products/eventlog/",
+    "metric": "freshness",
+    "current": 166,
+    "previous": 5,
+    "delta_pct": null,
+    "message": "No data since 2026-04-03 -- 166 days behind (threshold 5). The daily load may have stopped."
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://pitstop.manageengine.com/",
+    "entity": "https://pitstop.manageengine.com/portal/es/community/topic/linh-v%C3%A0o-nh%C3%A0-c%C3%A1i-w88-m%E1%BB%9Bi-nh%E1%BA%A5t-ko-b%E1%BB%8B-ch%E1%BA%B7n",
+    "metric": "clicks",
+    "current": 109,
+    "previous": 245,
+    "delta_pct": -55.5,
+    "message": "Clicks 245 -> 109 (-55.5%)",
+    "lost_clicks": 136
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://pitstop.manageengine.com/",
+    "entity": "https://pitstop.manageengine.com/portal/en/community/topic/stickman-hook-%E2%80%93-a-simple-game-with-addictive-swinging-fun",
+    "metric": "clicks",
+    "current": 41,
+    "previous": 100,
+    "delta_pct": -59.0,
+    "message": "Clicks 100 -> 41 (-59.0%)",
+    "lost_clicks": 59
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://pitstop.manageengine.com/",
+    "entity": "https://pitstop.manageengine.com/portal/en/community/topic/patch-release-google-chrome-152-0-7977-64-65-for-windows-and-macos-28-8-2026",
+    "metric": "clicks",
+    "current": 24,
+    "previous": 47,
+    "delta_pct": -48.9,
+    "message": "Clicks 47 -> 24 (-48.9%)",
+    "lost_clicks": 23
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://pitstop.manageengine.com/",
+    "entity": "https://pitstop.manageengine.com/portal/en/community/topic/snow-rider-3d-immersive-snow-racing-with-stunning-3d-graphics",
+    "metric": "clicks",
+    "current": 27,
+    "previous": 47,
+    "delta_pct": -42.6,
+    "message": "Clicks 47 -> 27 (-42.6%)",
+    "lost_clicks": 20
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://pitstop.manageengine.com/",
+    "entity": "https://pitstop.manageengine.com/portal/en/community/topic/snow-rider-3d-immersive-snow-racing-with-stunning-3d-graphics",
+    "metric": "position",
+    "current": 15.32,
+    "previous": 11.41,
+    "delta_pct": null,
+    "message": "Position 11.4 -> 15.3 (worse by 3.9)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/kb/the-referenced-account-is-currently-locked-out.html",
+    "metric": "clicks",
+    "current": 422,
+    "previous": 794,
+    "delta_pct": -46.9,
+    "message": "Clicks 794 -> 422 (-46.9%)",
+    "lost_clicks": 372
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/network-monitoring/tech-topics/bare-metal-hypervisor.html",
+    "metric": "clicks",
+    "current": 9,
+    "previous": 120,
+    "delta_pct": -92.5,
+    "message": "Clicks 120 -> 9 (-92.5%)",
+    "lost_clicks": 111
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/eventlog/kb/windows-error-0x80004005.html",
+    "metric": "clicks",
+    "current": 142,
+    "previous": 225,
+    "delta_pct": -36.9,
+    "message": "Clicks 225 -> 142 (-36.9%)",
+    "lost_clicks": 83
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/privileged-access-management/",
+    "metric": "clicks",
+    "current": 60,
+    "previous": 129,
+    "delta_pct": -53.5,
+    "message": "Clicks 129 -> 60 (-53.5%)",
+    "lost_clicks": 69
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/kb/windows-security-log-event-id-4768.html",
+    "metric": "clicks",
+    "current": 7,
+    "previous": 68,
+    "delta_pct": -89.7,
+    "message": "Clicks 68 -> 7 (-89.7%)",
+    "lost_clicks": 61
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/privileged-access-management/release-notes.html",
+    "metric": "clicks",
+    "current": 75,
+    "previous": 126,
+    "delta_pct": -40.5,
+    "message": "Clicks 126 -> 75 (-40.5%)",
+    "lost_clicks": 51
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/desktop-central/patch-management/MAC-023.html",
+    "metric": "clicks",
+    "current": 1,
+    "previous": 37,
+    "delta_pct": -97.3,
+    "message": "Clicks 37 -> 1 (-97.3%)",
+    "lost_clicks": 36
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/identity-access-management.html",
+    "metric": "clicks",
+    "current": 50,
+    "previous": 83,
+    "delta_pct": -39.8,
+    "message": "Clicks 83 -> 50 (-39.8%)",
+    "lost_clicks": 33
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/desktop-central/api-doc.html",
+    "metric": "clicks",
+    "current": 50,
+    "previous": 82,
+    "delta_pct": -39.0,
+    "message": "Clicks 82 -> 50 (-39.0%)",
+    "lost_clicks": 32
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/passwordmanagerpro/help/restapi.html",
+    "metric": "clicks",
+    "current": 16,
+    "previous": 48,
+    "delta_pct": -66.7,
+    "message": "Clicks 48 -> 16 (-66.7%)",
+    "lost_clicks": 32
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/key-manager/upgradepack.html",
+    "metric": "clicks",
+    "current": 48,
+    "previous": 79,
+    "delta_pct": -39.2,
+    "message": "Clicks 79 -> 48 (-39.2%)",
+    "lost_clicks": 31
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/ad-recovery-manager/",
+    "metric": "clicks",
+    "current": 30,
+    "previous": 60,
+    "delta_pct": -50.0,
+    "message": "Clicks 60 -> 30 (-50.0%)",
+    "lost_clicks": 30
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/kb/what-is/logon-type-3.html",
+    "metric": "clicks",
+    "current": 15,
+    "previous": 43,
+    "delta_pct": -65.1,
+    "message": "Clicks 43 -> 15 (-65.1%)",
+    "lost_clicks": 28
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "https://www.manageengine.com/products/desktop-central/software-installation/silent_install_Bluebeam-Revu-eXtreme-(20.2.70).html",
+    "metric": "clicks",
+    "current": 33,
+    "previous": 61,
+    "delta_pct": -45.9,
+    "message": "Clicks 61 -> 33 (-45.9%)",
+    "lost_clicks": 28
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/cloud-siem/",
+    "entity": "https://www.manageengine.com/cloud-siem/",
+    "metric": "position",
+    "current": 25.84,
+    "previous": 16.34,
+    "delta_pct": null,
+    "message": "Position 16.3 -> 25.8 (worse by 9.5)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/data-security/",
+    "entity": "https://www.manageengine.com/data-security/dlp/data-leak-prevention-software.html",
+    "metric": "position",
+    "current": 34.54,
+    "previous": 27.53,
+    "delta_pct": null,
+    "message": "Position 27.5 -> 34.5 (worse by 7.0)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/data-security/",
+    "entity": "https://www.manageengine.com/data-security/what-is/data-classification.html",
+    "metric": "position",
+    "current": 60.86,
+    "previous": 53.03,
+    "delta_pct": null,
+    "message": "Position 53.0 -> 60.9 (worse by 7.8)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/log-management/",
+    "entity": "https://www.manageengine.com/log-management/siem-use-cases/threats/brute-force-detection.html",
+    "metric": "clicks",
+    "current": 1,
+    "previous": 21,
+    "delta_pct": -95.2,
+    "message": "Clicks 21 -> 1 (-95.2%)",
+    "lost_clicks": 20
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/log-management/",
+    "entity": "https://www.manageengine.com/log-management/download.html",
+    "metric": "position",
+    "current": 15.43,
+    "previous": 6.06,
+    "delta_pct": null,
+    "message": "Position 6.1 -> 15.4 (worse by 9.4)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/log-management/",
+    "entity": "https://www.manageengine.com/log-management/threat-intelligence-feeds-for-cybersecurity.html",
+    "metric": "position",
+    "current": 38.53,
+    "previous": 34.93,
+    "delta_pct": null,
+    "message": "Position 34.9 -> 38.5 (worse by 3.6)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/kb/the-referenced-account-is-currently-locked-out.html",
+    "metric": "clicks",
+    "current": 422,
+    "previous": 795,
+    "delta_pct": -46.9,
+    "message": "Clicks 795 -> 422 (-46.9%)",
+    "lost_clicks": 373
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/kb/windows-security-log-event-id-4768.html",
+    "metric": "clicks",
+    "current": 7,
+    "previous": 68,
+    "delta_pct": -89.7,
+    "message": "Clicks 68 -> 7 (-89.7%)",
+    "lost_clicks": 61
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/kb/what-is/logon-type-3.html",
+    "metric": "clicks",
+    "current": 15,
+    "previous": 44,
+    "delta_pct": -65.9,
+    "message": "Clicks 44 -> 15 (-65.9%)",
+    "lost_clicks": 29
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/upgrade-postgresql-version-17.html",
+    "metric": "clicks",
+    "current": 34,
+    "previous": 59,
+    "delta_pct": -42.4,
+    "message": "Clicks 59 -> 34 (-42.4%)",
+    "lost_clicks": 25
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/file-activity-monitoring-software.html",
+    "metric": "position",
+    "current": 29.59,
+    "previous": 24.36,
+    "delta_pct": null,
+    "message": "Position 24.4 -> 29.6 (worse by 5.2)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/help/admin-settings/2fa-configuration-google-authenticator.html",
+    "metric": "position",
+    "current": 38.84,
+    "previous": 6.27,
+    "delta_pct": null,
+    "message": "Position 6.3 -> 38.8 (worse by 32.6)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/kb/how-to/how-to-apply-group-policy-to-security-group.html",
+    "metric": "position",
+    "current": 27.31,
+    "previous": 24.2,
+    "delta_pct": null,
+    "message": "Position 24.2 -> 27.3 (worse by 3.1)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/ad-manager/",
+    "entity": "https://www.manageengine.com/products/ad-manager/blog/active-directory-service-accounts.html",
+    "metric": "position",
+    "current": 15.88,
+    "previous": 12.39,
+    "delta_pct": null,
+    "message": "Position 12.4 -> 15.9 (worse by 3.5)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/ad-manager/",
+    "entity": "https://www.manageengine.com/products/ad-manager/blog/gpo/local-group-policy-vs-domain-group-policy.html",
+    "metric": "position",
+    "current": 14.32,
+    "previous": 8.23,
+    "delta_pct": null,
+    "message": "Position 8.2 -> 14.3 (worse by 6.1)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/exchange-reports/",
+    "entity": "https://www.manageengine.com/products/exchange-reports/outlook-web-access-reports.html",
+    "metric": "position",
+    "current": 17.87,
+    "previous": 13.99,
+    "delta_pct": null,
+    "message": "Position 14.0 -> 17.9 (worse by 3.9)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/self-service-password/",
+    "entity": "https://www.manageengine.com/products/self-service-password/blog/sso/what-is-SP-initiated-sso.html",
+    "metric": "position",
+    "current": 5.94,
+    "previous": 2.91,
+    "delta_pct": null,
+    "message": "Position 2.9 -> 5.9 (worse by 3.0)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/blog/new-design-layout-and-features-the-all-new-ui-of-servicedesk-plus-cloud-is-here.html",
+    "metric": "position",
+    "current": 8.92,
+    "previous": 4.26,
+    "delta_pct": null,
+    "message": "Position 4.3 -> 8.9 (worse by 4.7)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/it-incident-management/incident-vs-problem-vs-change-vs-asset-management.html",
+    "metric": "position",
+    "current": 28.02,
+    "previous": 24.22,
+    "delta_pct": null,
+    "message": "Position 24.2 -> 28.0 (worse by 3.8)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/itsm/ai-itsm-trends.html",
+    "metric": "position",
+    "current": 17.98,
+    "previous": 9.83,
+    "delta_pct": null,
+    "message": "Position 9.8 -> 18.0 (worse by 8.1)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/itsm/gartner-itsm-platforms.html",
+    "metric": "position",
+    "current": 28.02,
+    "previous": 19.3,
+    "delta_pct": null,
+    "message": "Position 19.3 -> 28.0 (worse by 8.7)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/itsm/it-manager.html",
+    "metric": "position",
+    "current": 24.84,
+    "previous": 20.33,
+    "delta_pct": null,
+    "message": "Position 20.3 -> 24.8 (worse by 4.5)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/itsm/itil-best-practices.html",
+    "metric": "position",
+    "current": 25.72,
+    "previous": 19.72,
+    "delta_pct": null,
+    "message": "Position 19.7 -> 25.7 (worse by 6.0)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/itsm/itil.html",
+    "metric": "position",
+    "current": 50.09,
+    "previous": 46.65,
+    "delta_pct": null,
+    "message": "Position 46.6 -> 50.1 (worse by 3.4)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/itsm/what-is-configuration-management.html",
+    "metric": "position",
+    "current": 33.61,
+    "previous": 30.33,
+    "delta_pct": null,
+    "message": "Position 30.3 -> 33.6 (worse by 3.3)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/itsm/what-is-itil-4-management-practices.html",
+    "metric": "position",
+    "current": 25.98,
+    "previous": 20.97,
+    "delta_pct": null,
+    "message": "Position 21.0 -> 26.0 (worse by 5.0)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "https://www.manageengine.com/products/service-desk/itsm/what-is-itil-4.html",
+    "metric": "position",
+    "current": 25.8,
+    "previous": 21.94,
+    "delta_pct": null,
+    "message": "Position 21.9 -> 25.8 (worse by 3.9)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "property",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "https://www.manageengine.com/products/active-directory-audit/",
+    "metric": "clicks",
+    "current": 4048,
+    "previous": 5142,
+    "delta_pct": -21.3,
+    "message": "Clicks 5,142 -> 4,048 (-21.3%) over 7d"
+   }
+  ]
+ }
+}

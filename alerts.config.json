@@ -1,0 +1,76 @@
+{
+  "_comment": "Thresholds and delivery for the GSC monitor. Edited here and committed -- there is no server to save settings to.",
+
+  "email": {
+    "enabled": true,
+    "to": ["vignesh.es@zohocorp.com"],
+    "from": "vignesh.es@zohocorp.com",
+    "subject_prefix": "[GSC Monitor]",
+    "smtp_host": "smtp.zoho.in",
+    "smtp_port": 465,
+    "send_when_clean": false,
+    "_note": "Password comes from the SMTP_PASSWORD secret, never this file. Zoho SMTP with an app-specific password is the only delivery path that works from Actions -- Catalyst Mail refuses to send from zohocorp.com."
+  },
+
+  "windows": {
+    "compare_days": 7,
+    "_note": "Current N days vs the immediately preceding N days. 7 keeps day-of-week composition identical on both sides, which a 'vs last month' comparison does not."
+  },
+
+  "thresholds": {
+    "property": {
+      "clicks_drop_pct": 20,
+      "clicks_drop_min_abs": 50,
+      "impressions_drop_pct": 25,
+      "impressions_drop_min_abs": 2000,
+      "position_worsen_by": 1.5
+    },
+    "decay": {
+      "compare_to_days_ago": 91,
+      "clicks_drop_pct": 40,
+      "clicks_drop_min_abs": 200,
+      "impressions_drop_pct": 45,
+      "impressions_drop_min_abs": 20000,
+      "dormant_min_prior_clicks": 50,
+      "_note": "Last 28 days vs the 28 days ending a quarter ago. A week-on-week check cannot see a slow bleed: blogs.manageengine.com fell from 7,684 clicks/month to 0 across nine months without any single week breaching a threshold."
+    },
+
+    "page": {
+      "clicks_drop_pct": 35,
+      "clicks_drop_min_abs": 20,
+      "position_worsen_by": 3.0,
+      "position_min_impressions": 500,
+      "max_alerts": 15
+    },
+    "query": {
+      "clicks_drop_pct": 40,
+      "clicks_drop_min_abs": 15,
+      "position_worsen_by": 3.0,
+      "position_min_impressions": 300,
+      "max_alerts": 15
+    },
+    "_note": "Minimum absolute movements exist because a percentage on a small base is noise: a page going 3 clicks -> 1 is a 67% drop and means nothing."
+  },
+
+  "pipeline": {
+    "max_days_behind": 5,
+    "_note": "Search Console finalises on a ~3 day lag and the loader targets today-3, so 5 allows one missed run before shouting.",
+    "min_rows_vs_median_pct": 40,
+    "alert_on_missing_days": true,
+    "gap_min_median_rows": 20,
+    "_gap_note": "Missing days are only a fault if the property had traffic to miss. A near-dead property genuinely returns zero rows for many days -- re-probed against the API to confirm. Below this median daily row count, gaps are not reported; the decay check raises the real problem instead."
+  },
+
+  "payload": {
+    "top_pages": 500,
+    "top_queries": 500,
+    "drilldown_pages": 200,
+    "drilldown_queries_per_page": 20,
+    "trend_days": 540
+  },
+
+  "properties": {
+    "exclude": [],
+    "_note": "site_urls listed in exclude are still loaded to BigQuery but hidden from the dashboard and never alerted on."
+  }
+}
