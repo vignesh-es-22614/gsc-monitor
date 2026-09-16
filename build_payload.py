@@ -262,6 +262,29 @@ def q_page_query_drilldown(
     return out
 
 
+def q_query_coverage(bq) -> dict:
+    """How far the query-grain backfill has reached, per property.
+
+    The Queries tab is empty for a property until the load reaches the recent
+    window. Without this the UI cannot tell "still loading" from "broken", and
+    those want very different reactions from whoever is looking.
+    """
+    sql = f"""
+    SELECT site_url, MIN(date) mn, MAX(date) mx, COUNT(DISTINCT date) days
+    FROM {QUERY_TABLE}
+    WHERE source = 'query_grain'
+    GROUP BY site_url
+    """
+    return {
+        r["site_url"]: {
+            "from": r["mn"].isoformat(),
+            "to": r["mx"].isoformat(),
+            "days": r["days"],
+        }
+        for r in bq.query(sql).result()
+    }
+
+
 def q_breakdowns(bq, latest: dt.date, win: int = 28) -> dict:
     """Country and device splits. Query-grain table, so shares not totals."""
     start = latest - dt.timedelta(days=win - 1)
@@ -325,8 +348,9 @@ def build(cfg: dict, out_dir: str, token: str, api_fallback: bool = False) -> di
     print("  top pages ...", flush=True)
     pages = _dimension_windows(bq, PAGE_TABLE, "page", pcfg["top_pages"], latest)
 
-    queries, drill, breakdowns = {}, {}, {}
+    queries, drill, breakdowns, qcov = {}, {}, {}, {}
     if table_exists(bq, f"{PROJECT}.{DATASET}.gsc_query_daily"):
+        qcov = q_query_coverage(bq)
         print("  top queries ...", flush=True)
         queries = _dimension_windows(
             bq, QUERY_TABLE, "query", pcfg["top_queries"], latest
@@ -428,6 +452,7 @@ def build(cfg: dict, out_dir: str, token: str, api_fallback: bool = False) -> di
                      else {str(k): v for k, v in pages.get(site, {}).items()},
             "queries": api["queries"] if api
                        else {str(k): v for k, v in queries.get(site, {}).items()},
+            "query_coverage": None if api else qcov.get(site),
             "page_queries": api["page_queries"] if api else drill.get(site, {}),
             "country": api["country"] if api
                        else breakdowns.get(site, {}).get("country", []),

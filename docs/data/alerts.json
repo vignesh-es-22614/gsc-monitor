@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-16T07:47:18+00:00",
+ "generated_at": "2026-09-16T07:51:58+00:00",
  "latest_date": "2026-09-13",
  "compare_days": 7,
  "thresholds": {
@@ -36,8 +36,8 @@
   "_note": "Minimum absolute movements exist because a percentage on a small base is noise: a page going 3 clicks -> 1 is a 67% drop and means nothing."
  },
  "counts": {
-  "critical": 3,
-  "warning": 47,
+  "critical": 2,
+  "warning": 50,
   "info": 0
  },
  "alerts": [
@@ -64,17 +64,6 @@
    "delta_pct": -100.0,
    "message": "Clicks 30 -> 0 (-100.0%) -- now zero",
    "lost_clicks": 30
-  },
-  {
-   "severity": "critical",
-   "scope": "pipeline",
-   "site_url": "https://www.manageengine.com/products/eventlog/",
-   "entity": "https://www.manageengine.com/products/eventlog/",
-   "metric": "freshness",
-   "current": 166,
-   "previous": 5,
-   "delta_pct": null,
-   "message": "No data since 2026-04-03 -- 166 days behind (threshold 5). The daily load may have stopped."
   },
   {
    "severity": "warning",
@@ -482,6 +471,42 @@
    "previous": 8.23,
    "delta_pct": null,
    "message": "Position 8.2 -> 14.3 (worse by 6.1)",
+   "lost_clicks": 0
+  },
+  {
+   "severity": "warning",
+   "scope": "page",
+   "site_url": "https://www.manageengine.com/products/eventlog/",
+   "entity": "https://www.manageengine.com/products/eventlog/kb/windows-error-0x80004005.html",
+   "metric": "clicks",
+   "current": 142,
+   "previous": 225,
+   "delta_pct": -36.9,
+   "message": "Clicks 225 -> 142 (-36.9%)",
+   "lost_clicks": 83
+  },
+  {
+   "severity": "warning",
+   "scope": "page",
+   "site_url": "https://www.manageengine.com/products/eventlog/",
+   "entity": "https://www.manageengine.com/products/eventlog/centralized-logging-solution.html",
+   "metric": "position",
+   "current": 21.26,
+   "previous": 18.22,
+   "delta_pct": null,
+   "message": "Position 18.2 -> 21.3 (worse by 3.0)",
+   "lost_clicks": 0
+  },
+  {
+   "severity": "warning",
+   "scope": "page",
+   "site_url": "https://www.manageengine.com/products/eventlog/",
+   "entity": "https://www.manageengine.com/products/eventlog/windows-event-log-monitoring.html",
+   "metric": "position",
+   "current": 25.61,
+   "previous": 22.6,
+   "delta_pct": null,
+   "message": "Position 22.6 -> 25.6 (worse by 3.0)",
    "lost_clicks": 0
   },
   {

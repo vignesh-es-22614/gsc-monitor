@@ -61,10 +61,15 @@ header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-c
 .iconbtn:hover{color:var(--ink)}
 
 .layout{display:grid;grid-template-columns:266px minmax(0,1fr);gap:16px;align-items:start}
-@media (max-width:900px){.layout{grid-template-columns:1fr}}
+/* min-width:0 on the tracks' contents: a `1fr` track is minmax(auto,1fr), so
+   the sidebar's nowrap property names would otherwise set a min-content floor
+   wider than a phone screen and push the whole page into horizontal scroll. */
+.layout>*{min-width:0}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
 
 /* ---------------------------------------------------------------- cards */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.card{min-width:0}
 .card>h2{font-size:13px;padding:13px 15px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .card>h2 .note{font-weight:400;color:var(--muted);font-size:11.5px}
@@ -72,8 +77,8 @@ header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-c
 
 /* ------------------------------------------------------------- property */
 .plist{max-height:none;overflow:auto}
-.plist button{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;
-  padding:9px 14px;border-bottom:1px solid var(--border);font:inherit;color:inherit}
+.plist button{display:block;width:100%;min-width:0;text-align:left;border:0;background:none;
+  cursor:pointer;padding:9px 14px;border-bottom:1px solid var(--border);font:inherit;color:inherit}
 .plist button:last-child{border-bottom:0}
 .plist button:hover{background:var(--surface-2)}
 .plist button[aria-current="true"]{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--s1)}
@@ -517,9 +522,22 @@ function entityTable(kind){
   const pd=S.propData, w=String(S.win);
   const rows = (kind==='pages'? pd.pages : pd.queries)[w] || [];
   if(!rows.length){
-    return `<div class="card"><div class="empty">${kind==='queries'
-      ? 'No query-grain data loaded for this property yet.'
-      : 'No pages with traffic in this window.'}</div></div>`;
+    // "Empty" means two very different things: the backfill has not reached
+    // this window yet, or there genuinely was no traffic. Say which.
+    let msg = 'No pages with traffic in this window.';
+    if(kind==='queries'){
+      const cov = pd.query_coverage;
+      msg = cov
+        ? `Query-level data for this property is loaded through <b>${esc(cov.to)}</b>
+           (${fmt(cov.days)} days from ${esc(cov.from)}), which does not yet reach the
+           last ${S.win} days. The backfill is still running — this tab fills in as it
+           catches up. Page figures on the other tab are complete.`
+        : `No query-level data loaded for this property yet. The backfill loads
+           page grain first, then query grain.`;
+    }
+    return `<div class="card"><h2>${kind==='pages'?'Pages':'Queries'}</h2>
+      <div class="empty" style="max-width:560px;margin:0 auto;line-height:1.6">${msg}</div>
+      <div style="height:10px"></div></div>`;
   }
   const q=S.q.toLowerCase();
   let list = q ? rows.filter(r=>String(r.k).toLowerCase().includes(q)) : rows.slice();

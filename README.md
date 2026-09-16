@@ -106,6 +106,14 @@ python -m http.server -d docs 8080    # then open http://localhost:8080
 per property, so 6 is comfortable; the ceiling that bites first is the
 per-account 1,200 queries/minute. Serially the backfill takes most of a day.
 
+A backfill with an explicit `--start` loads **newest day first**. A dashboard
+is judged on its last 28 days, and loading chronologically means those arrive
+last — a property can be 80% backfilled and still show an empty Queries tab.
+Pass `--oldest-first` to reverse that. Resumes (no `--start`) always run
+chronologically: the resume point is `MAX(date)`, so a newest-first run that
+was interrupted would leave `MAX` at the end and the next resume would skip
+everything it had not reached.
+
 The exporter is **idempotent**: it deletes the (property, date-range) it is
 about to write before writing it, so re-running any range is safe. `--start`
 forces a range; without it each property resumes from its own last loaded date.

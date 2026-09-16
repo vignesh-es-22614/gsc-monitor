@@ -356,6 +356,7 @@ def export_site_grain(
     end: dt.date,
     append_only: bool,
     tag: str = "",
+    newest_first: bool = True,
 ) -> int:
     """Pull [start, end] for one property at one grain. Returns rows written."""
     n_days = (end - start).days + 1
@@ -367,13 +368,23 @@ def export_site_grain(
     buffer: list[dict] = []
     total_rows = 0
 
-    day = start
-    while day <= end:
+    # Newest first by default. A dashboard is judged on the last 28 days, and
+    # loading chronologically means those arrive last -- a property can be 80%
+    # backfilled and still show nothing useful. Reverse order makes every
+    # property useful within minutes and the deep history fill in behind it.
+    days = []
+    d = start
+    while d <= end:
+        days.append(d)
+        d += dt.timedelta(days=1)
+    if newest_first:
+        days.reverse()
+
+    for day in days:
         try:
             raw = fetch_day(service, site, day, dims)
         except HttpError as exc:
             print(f"{tag}  {day}  API error {exc.resp.status} -- skipped", flush=True)
-            day += dt.timedelta(days=1)
             continue
 
         buffer.extend(shape(raw, dims, site))
@@ -387,8 +398,6 @@ def export_site_grain(
         if len(buffer) >= FLUSH_ROWS:
             load_rows(bq, table_id, dims, buffer)
             buffer = []
-
-        day += dt.timedelta(days=1)
 
     load_rows(bq, table_id, dims, buffer)
     print(f"{tag}[{label}] {total_rows:,} rows", flush=True)
@@ -430,6 +439,15 @@ def main() -> None:
             "Pull this many properties in parallel. Search Console quota is "
             "per property, so 5-6 is comfortable; the limit that bites first "
             "is the per-account 1,200 queries/minute."
+        ),
+    )
+    p.add_argument(
+        "--oldest-first",
+        action="store_true",
+        help=(
+            "Load a backfill chronologically instead of newest-first. Newest "
+            "first is the default so the recent window a dashboard actually "
+            "shows is populated early."
         ),
     )
     p.add_argument(
@@ -516,6 +534,12 @@ def main() -> None:
             written += export_site_grain(
                 bq, svc, site, label, table_id, dims, start, end,
                 args.append_only, tag,
+                # Newest-first only for an explicit --start range. On a resume
+                # the start comes from MAX(date), so if a newest-first run were
+                # interrupted MAX would already sit at the end and the next
+                # resume would skip everything it had not reached. An explicit
+                # range is re-cleared and re-pulled wholesale, so it is safe.
+                newest_first=(not args.oldest_first and bool(args.start)),
             )
         return written
 

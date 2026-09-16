@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-16T07:44:43+00:00",
+ "generated_at": "2026-09-16T07:51:33+00:00",
  "latest_date": "2026-09-13",
  "windows": [
   7,
@@ -31,15 +31,6 @@
      "position_prev": 11.98,
      "pages": 22429
     },
-    "7": {
-     "clicks": 78242,
-     "clicks_prev": 79816,
-     "impressions": 4720297,
-     "impressions_prev": 4876514,
-     "position": 10.52,
-     "position_prev": 11.03,
-     "pages": 12764
-    },
     "90": {
      "clicks": 1047363,
      "clicks_prev": 1125387,
@@ -48,6 +39,15 @@
      "position": 11.71,
      "position_prev": 10.48,
      "pages": 36455
+    },
+    "7": {
+     "clicks": 78242,
+     "clicks_prev": 79816,
+     "impressions": 4720297,
+     "impressions_prev": 4876514,
+     "position": 10.52,
+     "position_prev": 11.03,
+     "pages": 12764
     }
    }
   },
@@ -74,15 +74,6 @@
      "position_prev": 9.77,
      "pages": 17244
     },
-    "7": {
-     "clicks": 9935,
-     "clicks_prev": 9519,
-     "impressions": 614395,
-     "impressions_prev": 639070,
-     "position": 7.5,
-     "position_prev": 8.4,
-     "pages": 10504
-    },
     "90": {
      "clicks": 143476,
      "clicks_prev": 169731,
@@ -91,6 +82,15 @@
      "position": 9.08,
      "position_prev": 7.79,
      "pages": 24501
+    },
+    "7": {
+     "clicks": 9935,
+     "clicks_prev": 9519,
+     "impressions": 614395,
+     "impressions_prev": 639070,
+     "position": 7.5,
+     "position_prev": 8.4,
+     "pages": 10504
     }
    }
   },
@@ -100,11 +100,11 @@
    "label": "active-directory-audit",
    "is_root": false,
    "latest_date": "2026-09-13",
-   "earliest_date": "2025-05-04",
+   "earliest_date": "2025-04-29",
    "days_behind": 0,
-   "last_loaded_at": "2026-09-16T07:33:51.840766+00:00",
-   "days_present": 498,
-   "days_spanned": 498,
+   "last_loaded_at": "2026-09-16T07:49:48.610004+00:00",
+   "days_present": 503,
+   "days_spanned": 503,
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
@@ -117,15 +117,6 @@
      "position_prev": 10.98,
      "pages": 2318
     },
-    "7": {
-     "clicks": 4048,
-     "clicks_prev": 5142,
-     "impressions": 390906,
-     "impressions_prev": 422501,
-     "position": 9.36,
-     "position_prev": 9.34,
-     "pages": 2051
-    },
     "90": {
      "clicks": 57004,
      "clicks_prev": 61343,
@@ -134,6 +125,15 @@
      "position": 10.58,
      "position_prev": 8.68,
      "pages": 2568
+    },
+    "7": {
+     "clicks": 4048,
+     "clicks_prev": 5142,
+     "impressions": 390906,
+     "impressions_prev": 422501,
+     "position": 9.36,
+     "position_prev": 9.34,
+     "pages": 2051
     }
    }
   },
@@ -145,38 +145,38 @@
    "latest_date": "2026-09-13",
    "earliest_date": "2025-05-04",
    "days_behind": 0,
-   "last_loaded_at": null,
+   "last_loaded_at": "2026-09-16T07:45:54.290024+00:00",
    "days_present": 498,
    "days_spanned": 498,
    "missing_days": 0,
-   "source": "search_console_api",
+   "source": "bigquery",
    "windows": {
-    "7": {
-     "clicks": 4085,
-     "clicks_prev": 4242,
-     "impressions": 359836,
-     "impressions_prev": 396990,
-     "position": 15.42,
-     "position_prev": 15.92,
-     "pages": 425
-    },
     "28": {
-     "clicks": 16585,
-     "clicks_prev": 17646,
-     "impressions": 1532196,
-     "impressions_prev": 1704509,
-     "position": 17.43,
-     "position_prev": 15.7,
-     "pages": 490
+     "clicks": 17432,
+     "clicks_prev": 18471,
+     "impressions": 1890355,
+     "impressions_prev": 2066929,
+     "position": 18.59,
+     "position_prev": 16.89,
+     "pages": 1544
     },
     "90": {
-     "clicks": 56464,
-     "clicks_prev": 61354,
-     "impressions": 5476882,
-     "impressions_prev": 8168376,
-     "position": 15.93,
-     "position_prev": 13.44,
-     "pages": 494
+     "clicks": 59205,
+     "clicks_prev": 64420,
+     "impressions": 6659249,
+     "impressions_prev": 9540025,
+     "position": 17.1,
+     "position_prev": 14.41,
+     "pages": 1692
+    },
+    "7": {
+     "clicks": 4324,
+     "clicks_prev": 4437,
+     "impressions": 446471,
+     "impressions_prev": 483977,
+     "position": 16.36,
+     "position_prev": 16.84,
+     "pages": 1339
     }
    }
   },
@@ -188,38 +188,38 @@
    "latest_date": "2026-09-13",
    "earliest_date": "2025-05-04",
    "days_behind": 0,
-   "last_loaded_at": null,
+   "last_loaded_at": "2026-09-16T07:46:00.506292+00:00",
    "days_present": 498,
    "days_spanned": 498,
    "missing_days": 0,
-   "source": "search_console_api",
+   "source": "bigquery",
    "windows": {
-    "7": {
-     "clicks": 3894,
-     "clicks_prev": 4204,
-     "impressions": 295826,
-     "impressions_prev": 308126,
-     "position": 7.9,
-     "position_prev": 8.51,
-     "pages": 453
-    },
     "28": {
-     "clicks": 16405,
-     "clicks_prev": 17932,
-     "impressions": 1227982,
-     "impressions_prev": 1304354,
-     "position": 10.31,
-     "position_prev": 10.05,
-     "pages": 499
+     "clicks": 17160,
+     "clicks_prev": 18798,
+     "impressions": 1447009,
+     "impressions_prev": 1516545,
+     "position": 12.21,
+     "position_prev": 11.07,
+     "pages": 3198
     },
     "90": {
-     "clicks": 56647,
-     "clicks_prev": 59197,
-     "impressions": 4301605,
-     "impressions_prev": 5002436,
-     "position": 9.64,
-     "position_prev": 8.49,
-     "pages": 499
+     "clicks": 59274,
+     "clicks_prev": 62503,
+     "impressions": 5002786,
+     "impressions_prev": 5846691,
+     "position": 10.83,
+     "position_prev": 9.12,
+     "pages": 3549
+    },
+    "7": {
+     "clicks": 4039,
+     "clicks_prev": 4423,
+     "impressions": 345522,
+     "impressions_prev": 357618,
+     "position": 9.11,
+     "position_prev": 9.69,
+     "pages": 2688
     }
    }
   },
@@ -231,38 +231,38 @@
    "latest_date": "2026-09-13",
    "earliest_date": "2025-05-04",
    "days_behind": 0,
-   "last_loaded_at": null,
+   "last_loaded_at": "2026-09-16T07:47:20.193982+00:00",
    "days_present": 498,
    "days_spanned": 498,
    "missing_days": 0,
-   "source": "search_console_api",
+   "source": "bigquery",
    "windows": {
-    "7": {
-     "clicks": 2762,
-     "clicks_prev": 2906,
-     "impressions": 436548,
-     "impressions_prev": 459020,
-     "position": 8.29,
-     "position_prev": 8.63,
-     "pages": 383
-    },
     "28": {
-     "clicks": 11262,
-     "clicks_prev": 13587,
-     "impressions": 1772914,
-     "impressions_prev": 2065065,
-     "position": 10.15,
-     "position_prev": 10.02,
-     "pages": 469
+     "clicks": 11602,
+     "clicks_prev": 14078,
+     "impressions": 2181772,
+     "impressions_prev": 2444606,
+     "position": 10.59,
+     "position_prev": 10.41,
+     "pages": 2382
     },
     "90": {
-     "clicks": 42510,
-     "clicks_prev": 51264,
-     "impressions": 6525946,
-     "impressions_prev": 8955472,
-     "position": 9.53,
-     "position_prev": 7.78,
-     "pages": 490
+     "clicks": 43802,
+     "clicks_prev": 52499,
+     "impressions": 7753732,
+     "impressions_prev": 10380915,
+     "position": 9.97,
+     "position_prev": 8.21,
+     "pages": 2767
+    },
+    "7": {
+     "clicks": 2848,
+     "clicks_prev": 3004,
+     "impressions": 533583,
+     "impressions_prev": 574107,
+     "position": 8.84,
+     "position_prev": 8.9,
+     "pages": 1932
     }
    }
   },
@@ -289,15 +289,6 @@
      "position_prev": 15.86,
      "pages": 4547
     },
-    "7": {
-     "clicks": 2548,
-     "clicks_prev": 2706,
-     "impressions": 262142,
-     "impressions_prev": 259244,
-     "position": 13.35,
-     "position_prev": 14.41,
-     "pages": 3675
-    },
     "90": {
      "clicks": 36003,
      "clicks_prev": 39345,
@@ -306,6 +297,15 @@
      "position": 15.33,
      "position_prev": 11.83,
      "pages": 5386
+    },
+    "7": {
+     "clicks": 2548,
+     "clicks_prev": 2706,
+     "impressions": 262142,
+     "impressions_prev": 259244,
+     "position": 13.35,
+     "position_prev": 14.41,
+     "pages": 3675
     }
    }
   },
@@ -317,38 +317,38 @@
    "latest_date": "2026-09-13",
    "earliest_date": "2025-05-04",
    "days_behind": 0,
-   "last_loaded_at": null,
+   "last_loaded_at": "2026-09-16T07:46:45.884147+00:00",
    "days_present": 498,
    "days_spanned": 498,
    "missing_days": 0,
-   "source": "search_console_api",
+   "source": "bigquery",
    "windows": {
-    "7": {
-     "clicks": 2153,
-     "clicks_prev": 2369,
-     "impressions": 165724,
-     "impressions_prev": 166861,
-     "position": 10.61,
-     "position_prev": 11.46,
-     "pages": 400
-    },
     "28": {
-     "clicks": 9331,
-     "clicks_prev": 9477,
-     "impressions": 675226,
-     "impressions_prev": 683042,
-     "position": 13.29,
-     "position_prev": 12.43,
-     "pages": 489
+     "clicks": 10034,
+     "clicks_prev": 10233,
+     "impressions": 829694,
+     "impressions_prev": 828094,
+     "position": 14.77,
+     "position_prev": 13.01,
+     "pages": 1734
     },
     "90": {
-     "clicks": 31365,
-     "clicks_prev": 33813,
-     "impressions": 2280487,
-     "impressions_prev": 4550166,
-     "position": 12.05,
-     "position_prev": 9.35,
-     "pages": 496
+     "clicks": 33726,
+     "clicks_prev": 36083,
+     "impressions": 2755862,
+     "impressions_prev": 5086018,
+     "position": 12.84,
+     "position_prev": 9.56,
+     "pages": 2029
+    },
+    "7": {
+     "clicks": 2314,
+     "clicks_prev": 2539,
+     "impressions": 199481,
+     "impressions_prev": 201582,
+     "position": 11.57,
+     "position_prev": 12.36,
+     "pages": 1517
     }
    }
   },
@@ -375,15 +375,6 @@
      "position_prev": 26.7,
      "pages": 526
     },
-    "7": {
-     "clicks": 481,
-     "clicks_prev": 488,
-     "impressions": 68610,
-     "impressions_prev": 70431,
-     "position": 24.15,
-     "position_prev": 26.32,
-     "pages": 470
-    },
     "90": {
      "clicks": 6107,
      "clicks_prev": 6081,
@@ -392,6 +383,15 @@
      "position": 25.28,
      "position_prev": 20.37,
      "pages": 555
+    },
+    "7": {
+     "clicks": 481,
+     "clicks_prev": 488,
+     "impressions": 68610,
+     "impressions_prev": 70431,
+     "position": 24.15,
+     "position_prev": 26.32,
+     "pages": 470
     }
    }
   },
@@ -403,38 +403,38 @@
    "latest_date": "2026-09-13",
    "earliest_date": "2025-05-04",
    "days_behind": 0,
-   "last_loaded_at": null,
+   "last_loaded_at": "2026-09-16T07:45:17.706765+00:00",
    "days_present": 498,
    "days_spanned": 498,
    "missing_days": 0,
-   "source": "search_console_api",
+   "source": "bigquery",
    "windows": {
-    "7": {
-     "clicks": 233,
-     "clicks_prev": 217,
-     "impressions": 15638,
-     "impressions_prev": 16976,
-     "position": 12.55,
-     "position_prev": 13.33,
-     "pages": 104
-    },
     "28": {
-     "clicks": 871,
-     "clicks_prev": 1078,
-     "impressions": 69968,
-     "impressions_prev": 78876,
-     "position": 16.94,
-     "position_prev": 15.08,
-     "pages": 185
+     "clicks": 930,
+     "clicks_prev": 1184,
+     "impressions": 105529,
+     "impressions_prev": 112463,
+     "position": 25.69,
+     "position_prev": 22.67,
+     "pages": 508
     },
     "90": {
-     "clicks": 3227,
-     "clicks_prev": 3993,
-     "impressions": 254876,
-     "impressions_prev": 322285,
-     "position": 14.82,
-     "position_prev": 11.42,
-     "pages": 313
+     "clicks": 3441,
+     "clicks_prev": 4202,
+     "impressions": 360516,
+     "impressions_prev": 425630,
+     "position": 22.26,
+     "position_prev": 16.91,
+     "pages": 548
+    },
+    "7": {
+     "clicks": 254,
+     "clicks_prev": 232,
+     "impressions": 23400,
+     "impressions_prev": 25619,
+     "position": 21.25,
+     "position_prev": 22.57,
+     "pages": 452
     }
    }
   },
@@ -461,15 +461,6 @@
      "position_prev": 13.45,
      "pages": 61
     },
-    "7": {
-     "clicks": 192,
-     "clicks_prev": 175,
-     "impressions": 8263,
-     "impressions_prev": 7768,
-     "position": 13.51,
-     "position_prev": 12.13,
-     "pages": 52
-    },
     "90": {
      "clicks": 2671,
      "clicks_prev": 3043,
@@ -478,6 +469,15 @@
      "position": 13.51,
      "position_prev": 12.82,
      "pages": 66
+    },
+    "7": {
+     "clicks": 192,
+     "clicks_prev": 175,
+     "impressions": 8263,
+     "impressions_prev": 7768,
+     "position": 13.51,
+     "position_prev": 12.13,
+     "pages": 52
     }
    }
   },
@@ -504,15 +504,6 @@
      "position_prev": 17.5,
      "pages": 190
     },
-    "7": {
-     "clicks": 160,
-     "clicks_prev": 164,
-     "impressions": 11307,
-     "impressions_prev": 9889,
-     "position": 19.61,
-     "position_prev": 19.58,
-     "pages": 171
-    },
     "90": {
      "clicks": 1989,
      "clicks_prev": 2068,
@@ -521,6 +512,15 @@
      "position": 20.03,
      "position_prev": 15.94,
      "pages": 210
+    },
+    "7": {
+     "clicks": 160,
+     "clicks_prev": 164,
+     "impressions": 11307,
+     "impressions_prev": 9889,
+     "position": 19.61,
+     "position_prev": 19.58,
+     "pages": 171
     }
    }
   },
@@ -547,15 +547,6 @@
      "position_prev": 8.19,
      "pages": 7
     },
-    "7": {
-     "clicks": 71,
-     "clicks_prev": 100,
-     "impressions": 2373,
-     "impressions_prev": 2883,
-     "position": 8.01,
-     "position_prev": 7.41,
-     "pages": 6
-    },
     "90": {
      "clicks": 1305,
      "clicks_prev": 1343,
@@ -564,6 +555,15 @@
      "position": 7.78,
      "position_prev": 7.85,
      "pages": 8
+    },
+    "7": {
+     "clicks": 71,
+     "clicks_prev": 100,
+     "impressions": 2373,
+     "impressions_prev": 2883,
+     "position": 8.01,
+     "position_prev": 7.41,
+     "pages": 6
     }
    }
   },
@@ -590,15 +590,6 @@
      "position_prev": 22.41,
      "pages": 17
     },
-    "7": {
-     "clicks": 0,
-     "clicks_prev": 0,
-     "impressions": 13,
-     "impressions_prev": 11,
-     "position": 3.85,
-     "position_prev": 7.45,
-     "pages": 8
-    },
     "90": {
      "clicks": 0,
      "clicks_prev": 4,
@@ -607,25 +598,28 @@
      "position": 10.28,
      "position_prev": 18.98,
      "pages": 38
+    },
+    "7": {
+     "clicks": 0,
+     "clicks_prev": 0,
+     "impressions": 13,
+     "impressions_prev": 11,
+     "position": 3.85,
+     "position_prev": 7.45,
+     "pages": 8
     }
    }
   }
  ],
  "has_query_grain": true,
- "api_fallback_used": [
-  "https://www.manageengine.com/products/ad-manager/",
-  "https://www.manageengine.com/products/eventlog/",
-  "https://www.manageengine.com/products/exchange-reports/",
-  "https://www.manageengine.com/products/self-service-password/",
-  "https://www.manageengine.com/products/service-desk/"
- ],
+ "api_fallback_used": [],
  "notes": {
   "overlap": "manageengine.com is a URL-prefix property containing the product properties below it. Property figures must not be added together.",
   "query_grain": "Query-level clicks and impressions exclude anonymised queries, which Search Console omits entirely from any query-dimensioned request. They rank reliably but under-count badly -- one probed day showed 66% of clicks missing. Page figures come from a separate page-grain pull and are correct.",
   "history": "Page-grain history starts 2025-04-29; the Search Console API serves only a rolling ~16 months and nothing earlier can ever be recovered. ADAP has 2022-2025 history from an older export that under-counts, shown separately and never spliced on."
  },
  "alerts": {
-  "generated_at": "2026-09-16T07:47:18+00:00",
+  "generated_at": "2026-09-16T07:51:58+00:00",
   "latest_date": "2026-09-13",
   "compare_days": 7,
   "thresholds": {
@@ -662,8 +656,8 @@
    "_note": "Minimum absolute movements exist because a percentage on a small base is noise: a page going 3 clicks -> 1 is a 67% drop and means nothing."
   },
   "counts": {
-   "critical": 3,
-   "warning": 47,
+   "critical": 2,
+   "warning": 50,
    "info": 0
   },
   "alerts": [
@@ -690,17 +684,6 @@
     "delta_pct": -100.0,
     "message": "Clicks 30 -> 0 (-100.0%) -- now zero",
     "lost_clicks": 30
-   },
-   {
-    "severity": "critical",
-    "scope": "pipeline",
-    "site_url": "https://www.manageengine.com/products/eventlog/",
-    "entity": "https://www.manageengine.com/products/eventlog/",
-    "metric": "freshness",
-    "current": 166,
-    "previous": 5,
-    "delta_pct": null,
-    "message": "No data since 2026-04-03 -- 166 days behind (threshold 5). The daily load may have stopped."
    },
    {
     "severity": "warning",
@@ -1108,6 +1091,42 @@
     "previous": 8.23,
     "delta_pct": null,
     "message": "Position 8.2 -> 14.3 (worse by 6.1)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/eventlog/",
+    "entity": "https://www.manageengine.com/products/eventlog/kb/windows-error-0x80004005.html",
+    "metric": "clicks",
+    "current": 142,
+    "previous": 225,
+    "delta_pct": -36.9,
+    "message": "Clicks 225 -> 142 (-36.9%)",
+    "lost_clicks": 83
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/eventlog/",
+    "entity": "https://www.manageengine.com/products/eventlog/centralized-logging-solution.html",
+    "metric": "position",
+    "current": 21.26,
+    "previous": 18.22,
+    "delta_pct": null,
+    "message": "Position 18.2 -> 21.3 (worse by 3.0)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "page",
+    "site_url": "https://www.manageengine.com/products/eventlog/",
+    "entity": "https://www.manageengine.com/products/eventlog/windows-event-log-monitoring.html",
+    "metric": "position",
+    "current": 25.61,
+    "previous": 22.6,
+    "delta_pct": null,
+    "message": "Position 22.6 -> 25.6 (worse by 3.0)",
     "lost_clicks": 0
    },
    {
