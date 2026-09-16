@@ -165,63 +165,102 @@ def q_daily(bq, trend_days: int, latest: dt.date) -> dict:
     return out
 
 
-def _dimension_windows(bq, table: str, dim: str, top_n: int, latest: dt.date) -> dict:
-    """Top `top_n` values of `dim` per property per window, with prior period.
+def _entity_sql(table: str, dim: str, n: int, latest: dt.date) -> str:
+    """Every value of `dim` for one property and one window, with prior period.
 
-    QUALIFY ranks inside each (site_url, window) so one scan serves every
-    property. Ranking is by current-period clicks, then impressions, so a page
-    that has just collapsed to zero clicks still appears -- ranking on clicks
-    alone would hide exactly the rows the alerting cares about.
+    No LIMIT and no QUALIFY. An earlier version kept only the top 500 per
+    property, which made the dashboard's own tables a sample rather than the
+    data -- the thing this exists to avoid. The result is written to its own
+    file and fetched only when that tab and window are actually opened.
+
+    Ordered by clicks so the first page rendered is the interesting one and the
+    browser never has to sort 384,000 rows before showing anything.
     """
-    parts = []
-    for n in WINDOWS:
-        cur_start = latest - dt.timedelta(days=n - 1)
-        prev_end = cur_start - dt.timedelta(days=1)
-        prev_start = prev_end - dt.timedelta(days=n - 1)
-        parts.append(
-            f"""
-            SELECT * FROM (
-              SELECT {n} AS win, site_url, {dim} AS k,
-                     SUM(IF(date >= '{cur_start}', clicks, 0)) AS c,
-                     SUM(IF(date >= '{cur_start}', impressions, 0)) AS i,
-                     SUM(IF(date <  '{cur_start}', clicks, 0)) AS c0,
-                     SUM(IF(date <  '{cur_start}', impressions, 0)) AS i0,
-                     SAFE_DIVIDE(
-                       SUM(IF(date >= '{cur_start}', position * impressions, 0)),
-                       SUM(IF(date >= '{cur_start}', impressions, 0))) AS p,
-                     SAFE_DIVIDE(
-                       SUM(IF(date <  '{cur_start}', position * impressions, 0)),
-                       SUM(IF(date <  '{cur_start}', impressions, 0))) AS p0
-              FROM {table}
-              WHERE site_url IS NOT NULL
-                AND {dim} IS NOT NULL
-                AND date BETWEEN '{prev_start}' AND '{latest}'
-              GROUP BY site_url, k
-              QUALIFY ROW_NUMBER() OVER (
-                PARTITION BY site_url
-                ORDER BY GREATEST(
-                  SUM(IF(date >= '{cur_start}', clicks, 0)),
-                  SUM(IF(date <  '{cur_start}', clicks, 0))) DESC,
-                  SUM(IF(date >= '{cur_start}', impressions, 0)) DESC
-              ) <= {top_n}
-            )
-            """
-        )
-    sql = "\nUNION ALL\n".join(parts)
-    out: dict[str, dict[int, list]] = {}
-    for r in bq.query(sql).result():
-        out.setdefault(r["site_url"], {}).setdefault(r["win"], []).append(
-            {
-                "k": r["k"],
-                "c": r["c"] or 0,
-                "i": r["i"] or 0,
-                "c0": r["c0"] or 0,
-                "i0": r["i0"] or 0,
-                "p": round(r["p"], 1) if r["p"] else None,
-                "p0": round(r["p0"], 1) if r["p0"] else None,
-            }
-        )
-    return out
+    cur_start = latest - dt.timedelta(days=n - 1)
+    prev_end = cur_start - dt.timedelta(days=1)
+    prev_start = prev_end - dt.timedelta(days=n - 1)
+    return f"""
+    SELECT {dim} AS k,
+           SUM(IF(date >= '{cur_start}', clicks, 0)) AS c,
+           SUM(IF(date >= '{cur_start}', impressions, 0)) AS i,
+           SUM(IF(date <  '{cur_start}', clicks, 0)) AS c0,
+           SUM(IF(date <  '{cur_start}', impressions, 0)) AS i0,
+           SAFE_DIVIDE(
+             SUM(IF(date >= '{cur_start}', position * impressions, 0)),
+             SUM(IF(date >= '{cur_start}', impressions, 0))) AS p,
+           SAFE_DIVIDE(
+             SUM(IF(date <  '{cur_start}', position * impressions, 0)),
+             SUM(IF(date <  '{cur_start}', impressions, 0))) AS p0
+    FROM {table}
+    WHERE site_url = @site
+      AND {dim} IS NOT NULL
+      AND date BETWEEN '{prev_start}' AND '{latest}'
+    GROUP BY k
+    ORDER BY c DESC, i DESC
+    """
+
+
+def write_entity_files(bq, out_dir: str, sites: list[dict], latest: dt.date) -> dict:
+    """One file per (property, grain, window), holding every row.
+
+    Rows are compact arrays rather than objects -- [k,c,i,c0,i0,p,p0] instead
+    of seven repeated key names per row. On 2.08M rows that naming overhead
+    alone would be about 85 MB.
+    """
+    os.makedirs(os.path.join(out_dir, "f"), exist_ok=True)
+    manifest: dict[str, dict] = {}
+
+    for p in sites:
+        site = p["site_url"]
+        for grain, table, dim in (
+            ("pages", PAGE_TABLE, "page"),
+            ("queries", QUERY_TABLE, "query"),
+        ):
+            for n in WINDOWS:
+                job = bq.query(
+                    _entity_sql(table, dim, n, latest),
+                    job_config=bigquery.QueryJobConfig(
+                        query_parameters=[
+                            bigquery.ScalarQueryParameter("site", "STRING", site)
+                        ]
+                    ),
+                )
+                rows = [
+                    [
+                        r["k"],
+                        r["c"] or 0,
+                        r["i"] or 0,
+                        r["c0"] or 0,
+                        r["i0"] or 0,
+                        round(r["p"], 1) if r["p"] else None,
+                        round(r["p0"], 1) if r["p0"] else None,
+                    ]
+                    for r in job.result()
+                ]
+                name = f"f/{p['slug']}-{grain}-{n}.json"
+                path = os.path.join(out_dir, name)
+                with open(path, "w", encoding="utf-8") as fh:
+                    json.dump(
+                        {
+                            "site_url": site,
+                            "grain": grain,
+                            "win": n,
+                            "cols": ["k", "c", "i", "c0", "i0", "p", "p0"],
+                            "n": len(rows),
+                            "rows": rows,
+                        },
+                        fh,
+                        separators=(",", ":"),
+                    )
+                kb = os.path.getsize(path) // 1024
+                manifest.setdefault(p["slug"], {})[f"{grain}-{n}"] = {
+                    "n": len(rows),
+                    "kb": kb,
+                }
+                print(
+                    f"    {name:<52} {len(rows):>8,} rows  {kb:>6,} KB", flush=True
+                )
+    return manifest
 
 
 def q_page_query_drilldown(
@@ -285,6 +324,44 @@ def q_query_coverage(bq) -> dict:
     }
 
 
+def q_query_page_drilldown(
+    bq, latest: dt.date, n_queries: int, n_pages: int, win: int = 28
+) -> dict:
+    """Which pages rank for each top query -- the inverse of the page drilldown.
+
+    A query rarely maps to one URL: several pages on the same site can rank for
+    it, and knowing which one Google actually surfaces is the point of asking.
+    """
+    start = latest - dt.timedelta(days=win - 1)
+    sql = f"""
+    WITH qp AS (
+      SELECT site_url, query, page,
+             SUM(clicks) AS c, SUM(impressions) AS i,
+             SAFE_DIVIDE(SUM(position * impressions), SUM(impressions)) AS p
+      FROM {QUERY_TABLE}
+      WHERE site_url IS NOT NULL AND date >= '{start}'
+      GROUP BY site_url, query, page
+    ),
+    top_q AS (
+      SELECT site_url, query
+      FROM qp GROUP BY site_url, query
+      QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY site_url ORDER BY SUM(c) DESC, SUM(i) DESC) <= {n_queries}
+    )
+    SELECT qp.site_url, qp.query, qp.page, qp.c, qp.i, qp.p
+    FROM qp JOIN top_q USING (site_url, query)
+    QUALIFY ROW_NUMBER() OVER (
+      PARTITION BY qp.site_url, qp.query
+      ORDER BY qp.c DESC, qp.i DESC) <= {n_pages}
+    """
+    out: dict[str, dict[str, list]] = {}
+    for r in bq.query(sql).result():
+        out.setdefault(r["site_url"], {}).setdefault(r["query"], []).append(
+            [r["page"], r["c"] or 0, r["i"] or 0, round(r["p"], 1) if r["p"] else None]
+        )
+    return out
+
+
 def q_breakdowns(bq, latest: dt.date, win: int = 28) -> dict:
     """Country and device splits. Query-grain table, so shares not totals."""
     start = latest - dt.timedelta(days=win - 1)
@@ -328,7 +405,32 @@ def q_adap_legacy(bq) -> list:
 # --------------------------------------------------------------------------- #
 # Assembly
 # --------------------------------------------------------------------------- #
-def build(cfg: dict, out_dir: str, token: str, api_fallback: bool = False) -> dict:
+def _existing_manifest(out_dir: str) -> dict:
+    """Rebuild the entity-file manifest from what is already on disk."""
+    d = os.path.join(out_dir, "f")
+    out: dict[str, dict] = {}
+    if not os.path.isdir(d):
+        return out
+    for fn in os.listdir(d):
+        if not fn.endswith(".json"):
+            continue
+        stem = fn[:-5]
+        slug_part, grain, win = stem.rsplit("-", 2)
+        path = os.path.join(d, fn)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                n = json.load(fh).get("n", 0)
+        except Exception:  # noqa: BLE001
+            continue
+        out.setdefault(slug_part, {})[f"{grain}-{win}"] = {
+            "n": n,
+            "kb": os.path.getsize(path) // 1024,
+        }
+    return out
+
+
+def build(cfg: dict, out_dir: str, token: str, api_fallback: bool = False,
+          skip_entity_files: bool = False) -> dict:
     creds = load_credentials(token)
     bq = bigquery.Client(project=PROJECT, credentials=creds)
 
@@ -345,19 +447,16 @@ def build(cfg: dict, out_dir: str, token: str, api_fallback: bool = False) -> di
     print("  daily trend ...", flush=True)
     daily = q_daily(bq, pcfg["trend_days"], latest)
 
-    print("  top pages ...", flush=True)
-    pages = _dimension_windows(bq, PAGE_TABLE, "page", pcfg["top_pages"], latest)
-
-    queries, drill, breakdowns, qcov = {}, {}, {}, {}
+    drill, qdrill, breakdowns, qcov = {}, {}, {}, {}
     if table_exists(bq, f"{PROJECT}.{DATASET}.gsc_query_daily"):
         qcov = q_query_coverage(bq)
-        print("  top queries ...", flush=True)
-        queries = _dimension_windows(
-            bq, QUERY_TABLE, "query", pcfg["top_queries"], latest
-        )
         print("  page -> query drilldown ...", flush=True)
         drill = q_page_query_drilldown(
             bq, latest, pcfg["drilldown_pages"], pcfg["drilldown_queries_per_page"]
+        )
+        print("  query -> page drilldown ...", flush=True)
+        qdrill = q_query_page_drilldown(
+            bq, latest, pcfg["drilldown_queries"], pcfg["drilldown_pages_per_query"]
         )
         print("  country / device ...", flush=True)
         breakdowns = q_breakdowns(bq, latest)
@@ -448,12 +547,14 @@ def build(cfg: dict, out_dir: str, token: str, api_fallback: bool = False) -> di
             "latest_date": p["latest_date"],
             "source": p["source"],
             "daily": api["daily"] if api else daily.get(site, []),
-            "pages": api["pages"] if api
-                     else {str(k): v for k, v in pages.get(site, {}).items()},
-            "queries": api["queries"] if api
-                       else {str(k): v for k, v in queries.get(site, {}).items()},
+            # Entity tables are NOT inlined here -- they live in their own
+            # per-window files and are fetched when that tab is opened, so the
+            # first paint does not wait on 384,000 rows of query data.
+            "pages": api["pages"] if api else None,
+            "queries": api["queries"] if api else None,
             "query_coverage": None if api else qcov.get(site),
             "page_queries": api["page_queries"] if api else drill.get(site, {}),
+            "query_pages": {} if api else qdrill.get(site, {}),
             "country": api["country"] if api
                        else breakdowns.get(site, {}).get("country", []),
             "device": api["device"] if api
@@ -467,14 +568,28 @@ def build(cfg: dict, out_dir: str, token: str, api_fallback: bool = False) -> di
         kb = os.path.getsize(path) // 1024
         print(f"    {p['slug']:<44} {kb:>6,} KB", flush=True)
 
+    # The entity files are the expensive half of the build -- 84 queries and
+    # ~126 MB. Skipping them lets a change to the small payloads be rebuilt in
+    # a minute instead of twenty, reusing the manifest already on disk.
+    if skip_entity_files:
+        print("\n  entity tables: skipped, reusing the existing manifest", flush=True)
+        manifest = _existing_manifest(out_dir)
+    else:
+        print("\n  full entity tables (every row, one file per window) ...", flush=True)
+        bq_props = [p for p in props if p["source"] == "bigquery"]
+        manifest = write_entity_files(bq, out_dir, bq_props, latest)
+
     summary = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "latest_date": latest.isoformat(),
         "windows": WINDOWS,
         "root_property": ROOT_PROPERTY,
         "properties": props,
-        "has_query_grain": bool(queries),
+        "has_query_grain": bool(qcov),
         "api_fallback_used": sorted(api_props),
+        # slug -> {"pages-28": {"n": rows, "kb": size}, ...}. The UI reads this
+        # to show a row count and a size warning before fetching a big file.
+        "entity_files": manifest,
         "notes": {
             "overlap": (
                 "manageengine.com is a URL-prefix property containing the "
@@ -521,12 +636,19 @@ def main() -> None:
             "while the backfill is still running."
         ),
     )
+    p.add_argument(
+        "--skip-entity-files",
+        action="store_true",
+        help="Reuse the existing per-window entity files instead of rebuilding "
+             "all 84 of them. For iterating on the small payloads.",
+    )
     args = p.parse_args()
     token = args.token or default_token_path()
 
     cfg = load_config(args.config)
     print("Building payload ...")
-    summary = build(cfg, args.out, token, api_fallback=args.api_fallback)
+    summary = build(cfg, args.out, token, api_fallback=args.api_fallback,
+                    skip_entity_files=args.skip_entity_files)
 
     # Alerts are computed by alerts.py and merged in afterwards, so that a
     # payload build and an alert run can happen independently.

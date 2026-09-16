@@ -45,7 +45,10 @@ a{color:var(--s1)}
 h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
 
 /* ---------------------------------------------------------------- shell */
-.wrap{max-width:1500px;margin:0 auto;padding-block:20px;padding-left:16px;padding-right:16px}
+/* Wide by design: these tables are long URLs and long queries beside seven
+   numeric columns, and horizontal room is what makes them readable. */
+.wrap{max-width:min(2200px,97vw);margin:0 auto;padding-block:20px;
+  padding-left:16px;padding-right:16px}
 header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
 .brand h1{font-size:19px}
 .brand .sub{color:var(--muted);font-size:12.5px;margin-top:3px}
@@ -60,7 +63,7 @@ header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-c
   border-radius:8px;padding:6px 10px;font:500 12.5px var(--font);cursor:pointer}
 .iconbtn:hover{color:var(--ink)}
 
-.layout{display:grid;grid-template-columns:266px minmax(0,1fr);gap:16px;align-items:start}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}
 /* min-width:0 on the tracks' contents: a `1fr` track is minmax(auto,1fr), so
    the sidebar's nowrap property names would otherwise set a min-content floor
    wider than a phone screen and push the whole page into horizontal scroll. */
@@ -128,7 +131,7 @@ th[aria-sort]:after{content:"";margin-left:4px}
 th[aria-sort="descending"]:after{content:"▾"}
 th[aria-sort="ascending"]:after{content:"▴"}
 tbody tr:hover{background:var(--surface-2)}
-td.ent{max-width:520px;overflow:hidden;text-overflow:ellipsis}
+td.ent{max-width:min(900px,48vw);overflow:hidden;text-overflow:ellipsis}
 td.ent .sub{color:var(--muted);font-size:11px}
 tr.clickable{cursor:pointer}
 .delta{font-variant-numeric:tabular-nums;font-size:12px}
@@ -210,7 +213,7 @@ footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--border);
 // ============================================================== state ===
 const S = {
   summary:null, prop:null, propData:null, win:28, tab:'pages',
-  smooth:true, sort:{key:'c',dir:-1}, openPage:null, range:180,
+  smooth:true, sort:{key:'c',dir:-1}, openPage:null, range:180, shown:300,
   // One filter set per tab, so switching tabs does not silently carry a
   // page pattern over onto queries.
   filters:{
@@ -448,7 +451,7 @@ function renderPropList(){
   el.onclick = ev => {
     const b = ev.target.closest('button[data-slug]'); if(!b) return;
     S.prop = b.dataset.slug === '__all__' ? null : b.dataset.slug;
-    S.openPage = null; S.q=''; render();
+    S.openPage = null; S.shown = 300; render();
   };
   $('#propcount').textContent = `(${S.summary.properties.length})`;
 }
@@ -578,9 +581,27 @@ function propView(){
     <div id="tabbody"></div>`;
 }
 
+// Entity tables live in their own per-window files. Fetch once, keep in memory
+// for the session -- switching tabs back and forth must not refetch 16 MB.
+const ENTITY_CACHE = new Map();
+function entityKey(){ return `${S.prop}-${S.tab}-${S.win}`; }
+
+async function loadEntities(){
+  const key = entityKey();
+  if(ENTITY_CACHE.has(key)) return ENTITY_CACHE.get(key);
+  const r = await fetch(`data/f/${key}.json`, {cache:'no-cache'});
+  if(!r.ok) throw new Error(`${r.status} fetching ${key}.json`);
+  const blob = await r.json();
+  // Compact arrays on the wire, objects in memory -- the table code reads
+  // named fields and the row count is small enough once it is here.
+  const rows = blob.rows.map(a=>({k:a[0],c:a[1],i:a[2],c0:a[3],i0:a[4],p:a[5],p0:a[6]}));
+  ENTITY_CACHE.set(key, rows);
+  return rows;
+}
+
 function entityTable(kind){
   const pd=S.propData, w=String(S.win);
-  const rows = (kind==='pages'? pd.pages : pd.queries)[w] || [];
+  const rows = ENTITY_CACHE.get(entityKey()) || [];
   if(!rows.length){
     // "Empty" means two very different things: the backfill has not reached
     // this window yet, or there genuinely was no traffic. Say which.
@@ -614,7 +635,9 @@ function entityTable(kind){
   // happens to be on screen is the behaviour people complain about.
   S.exportRows = list;
   S.exportKind = kind;
-  const shown = list.slice(0,300);
+  // Render in pages. Filtering and sorting run over every row, but putting
+  // 384,000 <tr> elements in the DOM would lock the tab for minutes.
+  const shown = list.slice(0, S.shown);
   const max = Math.max(...shown.map(r=>r.c), 1);
 
   const caveat = kind==='queries'
@@ -629,8 +652,8 @@ function entityTable(kind){
   return `<div class="card">
     <h2>${kind==='pages'?'Pages':'Queries'}
       <span class="note">last ${S.win} days vs the ${S.win} before ·
-        ${fmt(list.length)}${filtered?' of '+fmt(rows.length):''} rows${
-          list.length>300?' · 300 shown, CSV has all '+fmt(list.length):''}</span></h2>
+        <b>${fmt(list.length)}</b>${filtered?' of '+fmt(rows.length):''} rows ·
+        complete, not a top-N sample</span></h2>
     <div class="body" style="padding-bottom:0">
       <div class="filters">
         <select id="f_op" aria-label="Match mode">
@@ -656,12 +679,16 @@ function entityTable(kind){
       <th class="num">CTR</th>${th('p','Avg pos')}<th class="num">Δ pos</th>
     </tr></thead><tbody>` +
     shown.map(r=>{
-      const isOpen = kind==='pages' && S.openPage===r.k;
-      const drill = pd.page_queries && pd.page_queries[r.k];
+      const isOpen = S.openPage===r.k;
+      // Pages expand into the queries that drive them; queries expand into the
+      // pages that rank for them. Same interaction, opposite direction.
+      const drill = kind==='pages'
+        ? (pd.page_queries && pd.page_queries[r.k])
+        : (pd.query_pages && pd.query_pages[r.k]);
       const label = kind==='pages' ? String(r.k).replace(pd.site_url,'') || '/' : r.k;
-      let out = `<tr class="${kind==='pages'&&drill?'clickable':''}" data-key="${esc(r.k)}">
+      let out = `<tr class="${drill?'clickable':''}" data-key="${esc(r.k)}">
         <td class="ent" title="${esc(r.k)}">${esc(label)}
-          ${kind==='pages'&&drill?'<span style="color:var(--muted)">'+(isOpen?'▾':'▸')+'</span>':''}
+          ${drill?'<span style="color:var(--muted)">'+(isOpen?'▾':'▸')+'</span>':''}
           <span class="bar" style="width:${(r.c/max*100).toFixed(1)}%"></span></td>
         <td class="num">${fmt(r.c)}</td>
         <td class="num">${deltaHTML(r.c,r.c0)}<div class="sub" style="color:var(--muted);font-size:11px">${fmt(r.c0)}</div></td>
@@ -670,18 +697,32 @@ function entityTable(kind){
         <td class="num">${fmt1(r.p)}</td>
         <td class="num">${posDelta(r.p,r.p0)}</td></tr>`;
       if(isOpen && drill){
+        const heading = kind==='pages'
+          ? 'Top queries driving this page'
+          : 'Pages ranking for this query, by clicks';
         out += `<tr><td colspan="7" style="background:var(--surface-2);padding:0">
           <div style="padding:9px 14px">
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">
-              Top queries for this page · last 28 days · anonymised queries excluded</div>
+              ${heading} · last 28 days · anonymised queries excluded</div>
             <table style="font-size:12px"><tbody>` +
-            drill.map(([q,c,i,p])=>`<tr><td class="ent">${esc(q)}</td>
+            drill.map(([k2,c,i,p])=>{
+              const lbl = kind==='queries' ? (String(k2).replace(pd.site_url,'') || '/') : k2;
+              return `<tr><td class="ent" title="${esc(k2)}">${esc(lbl)}</td>
               <td class="num">${fmt(c)} clicks</td><td class="num">${fmt(i)} impr</td>
-              <td class="num">pos ${fmt1(p)}</td></tr>`).join('') +
+              <td class="num">pos ${fmt1(p)}</td></tr>`;
+            }).join('') +
             `</tbody></table></div></td></tr>`;
       }
       return out;
-    }).join('') + `</tbody></table></div>${caveat}<div style="height:12px"></div></div>`;
+    }).join('') + `</tbody></table></div>` +
+    (list.length > shown.length
+      ? `<div style="padding:12px 15px;text-align:center">
+           <button class="iconbtn" id="more">Show ${fmt(Math.min(1000, list.length-shown.length))} more
+             <span style="color:var(--muted)">· ${fmt(shown.length)} of ${fmt(list.length)}</span></button>
+         </div>`
+      : `<div style="padding:11px 15px;text-align:center;color:var(--muted);font-size:12px">
+           All ${fmt(list.length)} rows shown</div>`) +
+    `${caveat}<div style="height:12px"></div></div>`;
 }
 
 function breakdownView(){
@@ -780,7 +821,22 @@ function render(){
   // --- tab body ----------------------------------------------------------
   const tb=$('#tabbody');
   if(S.tab==='pages' || S.tab==='queries'){
+    if(!ENTITY_CACHE.has(entityKey())){
+      const meta = (S.summary.entity_files||{})[S.prop]?.[`${S.tab}-${S.win}`];
+      tb.innerHTML = `<div class="card"><div class="spinner">
+        Loading all ${meta? fmt(meta.n)+' rows' : 'rows'}${
+          meta && meta.kb>2000 ? ` · ${(meta.kb/1024).toFixed(1)} MB` : ''} …</div></div>`;
+      loadEntities().then(render).catch(e=>{
+        tb.innerHTML = `<div class="card"><div class="empty">
+          Could not load the ${esc(S.tab)} table (${esc(e.message)}).<br>
+          Run <code>build_payload.py</code> to regenerate it.</div></div>`;
+      });
+      paintFooter();
+      return;
+    }
     tb.innerHTML = entityTable(S.tab);
+    const more = tb.querySelector('#more');
+    if(more) more.onclick = () => { S.shown += 1000; render(); };
     tb.querySelectorAll('th[data-key]').forEach(th=>th.onclick=()=>{
       const k=th.dataset.key;
       S.sort = S.sort.key===k ? {key:k,dir:-S.sort.dir} : {key:k,dir:k==='k'?1:-1};
@@ -797,6 +853,7 @@ function render(){
       el[ev] = () => {
         const pos = el.selectionStart;
         f[prop] = el.value;
+        S.shown = 300;   // a new filter starts at the top of its own result set
         render();
         const n = $('#'+id);
         if(n){ n.focus(); if(n.setSelectionRange && n.type!=='number') n.setSelectionRange(pos,pos); }
@@ -811,11 +868,9 @@ function render(){
       S.filters[S.tab] = {op:'contains', terms:'', join:'any', min:''};
       render();
     };
-    if(S.tab==='pages'){
-      tb.querySelectorAll('tr.clickable[data-key]').forEach(tr=>tr.onclick=()=>{
-        S.openPage = S.openPage===tr.dataset.key ? null : tr.dataset.key; render();
-      });
-    }
+    tb.querySelectorAll('tr.clickable[data-key]').forEach(tr=>tr.onclick=()=>{
+      S.openPage = S.openPage===tr.dataset.key ? null : tr.dataset.key; render();
+    });
   } else if(S.tab==='breakdown'){
     tb.innerHTML = breakdownView();
     if($('#bd_country')) barChart($('#bd_country'), S.propData.country.map(r=>({k:r.k,v:r.c})));
@@ -825,7 +880,7 @@ function render(){
   }
 
   $('#tabs').onclick = ev=>{ const b=ev.target.closest('button[data-tab]'); if(!b)return;
-    S.tab=b.dataset.tab; S.q=''; render(); };
+    S.tab=b.dataset.tab; S.shown=300; render(); };
 
   paintFooter();
 }
@@ -890,6 +945,7 @@ function initTheme(){
     S.win=+b.dataset.win;
     $('#winseg').querySelectorAll('button').forEach(x=>
       x.setAttribute('aria-pressed', +x.dataset.win===S.win));
+    S.shown = 300;   // each window has its own file and its own row count
     render();
   };
   $('#subtitle').textContent =

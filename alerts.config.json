@@ -64,8 +64,10 @@
   "payload": {
     "top_pages": 500,
     "top_queries": 500,
-    "drilldown_pages": 200,
-    "drilldown_queries_per_page": 20,
+    "drilldown_pages": 500,
+    "drilldown_queries_per_page": 25,
+    "drilldown_queries": 2000,
+    "drilldown_pages_per_query": 10,
     "trend_days": 540
   },
 

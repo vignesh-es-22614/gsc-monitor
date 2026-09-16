@@ -10,3 +10,13 @@ __pycache__/
 
 # Local digest preview written by "alerts.py --preview"; never published.
 docs/_digest_preview.html
+
+# The generated payload is ~126 MB per build -- every page and every query, at
+# three windows, for fourteen properties. Committing it daily would add tens of
+# gigabytes of repo churn a year, so the Action builds it and publishes it
+# straight to Pages as an artifact instead. Rebuild locally with:
+#   python build_payload.py --out docs/data --api-fallback
+docs/data/
+
+# Local CSV extracts from export_data.py.
+exports/

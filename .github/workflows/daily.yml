@@ -15,19 +15,30 @@ on:
         description: 'Re-pull from this date (YYYY-MM-DD). Leave blank to resume.'
         type: string
         default: ''
+      skip_export:
+        description: 'Skip the Search Console pull; rebuild the site from BigQuery only'
+        type: boolean
+        default: false
 
-# Needed to commit the rebuilt payload back to the repo; Pages serves docs/.
+# pages + id-token are what deploy-pages needs; contents stays read-only
+# because nothing is committed back any more.
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: gsc-daily
   cancel-in-progress: false
 
 jobs:
-  refresh:
+  # The payload is ~126 MB of per-window entity files -- every page and every
+  # query, uncapped. That is far too much to commit daily (roughly 45 GB of
+  # repo churn a year), so the site is built here and published straight to
+  # Pages as an artifact. Nothing is written back to the repository.
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
 
@@ -54,32 +65,29 @@ jobs:
           python -c "import json;d=json.load(open('gsc_token.json'));assert d.get('refresh_token'),'no refresh_token'"
 
       - name: Pull Search Console into BigQuery
+        if: ${{ inputs.skip_export != true }}
         run: |
           if [ -n "${{ inputs.backfill_from }}" ]; then
-            python gsc_export.py --all-sites --grain both --workers 6 \
+            python gsc_export.py --all-sites --grain all --workers 6 \
               --start "${{ inputs.backfill_from }}"
           else
-            python gsc_export.py --all-sites --grain both --workers 6
+            python gsc_export.py --all-sites --grain all --workers 6
           fi
 
-      # --api-fallback pulls any property BigQuery has no rows for straight
-      # from the Search Console API, so a backfill still in flight never leaves
-      # a property missing from the dashboard.
+      # --api-fallback covers any property BigQuery has no rows for yet, so a
+      # backfill still in flight never leaves a property missing from the site.
       - name: Build dashboard payload
         run: python build_payload.py --out docs/data --api-fallback
 
-      # always(): the payload is written before alerting runs, so an SMTP
-      # failure must not cost the day's data refresh. The job still ends red.
       - name: Detect anomalies and email the digest
         if: always()
         env:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
         run: |
-          EXTRA=""
           if [ "${{ inputs.send_email }}" = "true" ]; then
             python -c "
-import json,sys
+import json
 p='alerts.config.json'
 c=json.load(open(p)); c['email']['send_when_clean']=True
 json.dump(c,open(p,'w'),indent=2)"
@@ -87,20 +95,25 @@ json.dump(c,open(p,'w'),indent=2)"
           python alerts.py --out docs/data \
             --url "${DASHBOARD_URL:-https://vignesh-es-22614.github.io/gsc-monitor/}"
 
-      - name: Commit the refreshed payload
-        if: always()
-        run: |
-          git checkout -- alerts.config.json || true
-          git config user.name  'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add docs/
-          if git diff --cached --quiet; then
-            echo "No change in the data — nothing to commit."
-          else
-            git commit -m "Refresh Search Console dashboard — data through $(date -u +%Y-%m-%d)"
-            git push
-          fi
-
       - name: Clean up credentials
         if: always()
         run: rm -f gsc_token.json
+
+      - name: Report payload size
+        run: |
+          du -sh docs/data
+          echo "entity files: $(ls docs/data/f | wc -l)"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
