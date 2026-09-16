@@ -772,6 +772,7 @@ const EX = {
   f:{ from:'', to:'', page:'', pageOp:'contains', query:'', queryOp:'contains',
       join:'any', countries:[], devices:[] },
   groupBy:'query', limit:1000, opts:{countries:[], devices:[]},
+  open:null, drill:null,   // live drilldown: which row is expanded, and its rows
 };
 
 function exDefaults(){
@@ -910,11 +911,38 @@ function renderExplore(tb){
         <div class="tablewrap"><table><thead><tr>
           <th>${esc(EX.groupBy)}</th><th class="num">Clicks</th><th class="num">Impressions</th>
           <th class="num">CTR</th><th class="num">Avg pos</th></tr></thead><tbody>` +
-        r.rows.slice(0,500).map(x=>`<tr><td class="ent" title="${esc(x.k)}">${
-            esc(EX.groupBy==='page' ? (String(x.k).replace(S.propData.site_url,'')||'/') : x.k)}</td>
-          <td class="num">${fmt(x.clicks)}</td><td class="num">${fmt(x.impressions)}</td>
-          <td class="num">${x.ctr!=null?(x.ctr*100).toFixed(2)+'%':'–'}</td>
-          <td class="num">${fmt1(x.position)}</td></tr>`).join('') +
+        r.rows.slice(0,500).map(x=>{
+          const open = EX.open===x.k;
+          const into = EX.groupBy==='page' ? 'query'
+                     : EX.groupBy==='query' ? 'page' : null;
+          let tr = `<tr class="${into?'clickable':''}" data-k="${esc(x.k)}">
+            <td class="ent" title="${esc(x.k)}">${
+              esc(EX.groupBy==='page' ? (String(x.k).replace(S.propData.site_url,'')||'/') : x.k)}
+              ${into?`<span style="color:var(--muted)">${open?'▾':'▸'}</span>`:''}</td>
+            <td class="num">${fmt(x.clicks)}</td><td class="num">${fmt(x.impressions)}</td>
+            <td class="num">${x.ctr!=null?(x.ctr*100).toFixed(2)+'%':'–'}</td>
+            <td class="num">${fmt1(x.position)}</td></tr>`;
+          if(open){
+            const d = EX.drill;
+            tr += `<tr><td colspan="5" style="background:var(--surface-2);padding:0">
+              <div style="padding:9px 14px">
+                <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+                  color:var(--muted);margin-bottom:6px">Top 10 ${esc(into)}s ·
+                  ${esc(EX.f.from)} → ${esc(EX.f.to)} · same filters as above</div>` +
+              (!d ? '<div style="font-size:12px;color:var(--muted)">Loading…</div>'
+                  : !d.length ? '<div style="font-size:12px;color:var(--muted)">No rows.</div>'
+                  : `<table style="font-size:12px"><tbody>` + d.map(y=>
+                      `<tr><td class="ent" title="${esc(y.k)}">${
+                        esc(into==='page' ? (String(y.k).replace(S.propData.site_url,'')||'/') : y.k)}</td>
+                       <td class="num">${fmt(y.clicks)} clicks</td>
+                       <td class="num">${fmt(y.impressions)} impr</td>
+                       <td class="num">${y.ctr!=null?(y.ctr*100).toFixed(2)+'%':'–'}</td>
+                       <td class="num">pos ${fmt1(y.position)}</td></tr>`).join('')
+                    + `</tbody></table>`) +
+              `</div></td></tr>`;
+          }
+          return tr;
+        }).join('') +
         `</tbody></table></div>
         ${r.rows.length>500?`<div style="padding:11px;text-align:center;color:var(--muted);font-size:12px">
           500 of ${fmt(r.rows.length)} shown · CSV has all of them</div>`:''}
@@ -939,6 +967,15 @@ function renderExplore(tb){
     const arr = f[c.dataset.dim], v = c.dataset.val, i = arr.indexOf(v);
     if(i<0) arr.push(v); else arr.splice(i,1);
     renderExplore(tb);
+  });
+  tb.querySelectorAll('tr.clickable[data-k]').forEach(tr=>tr.onclick=async()=>{
+    const k = tr.dataset.k;
+    if(EX.open === k){ EX.open = null; EX.drill = null; renderExplore(tb); return; }
+    EX.open = k; EX.drill = null; renderExplore(tb);
+    const into = EX.groupBy==='page' ? 'query' : 'page';
+    try{ EX.drill = await SQLMOD.drill(S.prop, EX.f, EX.groupBy, k, into, 10); }
+    catch(e){ EX.drill = []; }
+    if(EX.open === k) renderExplore(tb);
   });
 
   if(r && r.series.length){

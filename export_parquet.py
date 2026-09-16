@@ -63,6 +63,9 @@ SCHEMA_TYPES = {
 }
 
 
+_USE_BQSTORAGE = True
+
+
 def slug(site_url: str) -> str:
     s = re.sub(r"^https?://", "", site_url).strip("/")
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
@@ -101,7 +104,23 @@ def fetch(bq, grain: str, site: str, lo: dt.date, hi: dt.date) -> pa.Table:
             query_parameters=[bigquery.ScalarQueryParameter("site", "STRING", site)]
         ),
     )
-    tbl = job.to_arrow()
+    # The BigQuery Storage API is much faster, but it speaks gRPC and dies
+    # behind an HTTP-only proxy with "failed to connect to all addresses".
+    # Fall back to the REST download rather than failing the export -- slower,
+    # but it works everywhere. Once the first attempt fails there is no point
+    # retrying it for every later chunk.
+    global _USE_BQSTORAGE
+    if _USE_BQSTORAGE:
+        try:
+            tbl = job.to_arrow()
+        except Exception as exc:  # noqa: BLE001
+            print(f"    BigQuery Storage API unavailable ({type(exc).__name__}); "
+                  f"falling back to REST for the rest of this run.", flush=True)
+            _USE_BQSTORAGE = False
+            tbl = job.to_arrow(create_bqstorage_client=False)
+    else:
+        tbl = job.to_arrow(create_bqstorage_client=False)
+
     fields = [pa.field(c, SCHEMA_TYPES[c]) for c in tbl.column_names]
     return tbl.cast(pa.schema(fields)), job.total_bytes_processed
 
@@ -123,6 +142,13 @@ def main() -> None:
             "revises the last few days, so 10 is ample for the daily run. "
             "Omit for a full rebuild."
         ),
+    )
+    p.add_argument(
+        "--resume",
+        action="store_true",
+        help="Skip any month whose parquet file already exists on disk. For "
+             "picking up an export that died part way without re-scanning "
+             "what it already wrote.",
     )
     p.add_argument("--out", default=os.path.join(HERE, "docs", "data", "pq"))
     p.add_argument("--token", default=None)
@@ -172,9 +198,17 @@ def main() -> None:
             prior = {f["m"]: f for f in old.get(sl, {}).get(grain, [])}
             for lo, hi in months_between(start, end):
                 key = f"{lo:%Y-%m}"
+                path_existing = os.path.join(d, f"{key}.parquet")
+                if args.resume and os.path.exists(path_existing):
+                    sz = os.path.getsize(path_existing)
+                    files.append({"m": key, "rows": pq.read_metadata(path_existing).num_rows,
+                                  "bytes": sz})
+                    total_bytes += sz
+                    skipped += 1
+                    continue
                 # Untouched month whose file is still on disk: keep it.
                 if hi < stale_from and key in prior \
-                        and os.path.exists(os.path.join(d, f"{key}.parquet")):
+                        and os.path.exists(path_existing):
                     files.append(prior[key])
                     total_bytes += prior[key]["bytes"]
                     total_rows += prior[key]["rows"]

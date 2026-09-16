@@ -65,9 +65,10 @@
     "top_pages": 500,
     "top_queries": 500,
     "drilldown_pages": 500,
-    "drilldown_queries_per_page": 25,
+    "drilldown_queries_per_page": 10,
     "drilldown_queries": 2000,
     "drilldown_pages_per_query": 10,
+    "_drilldown_note": "Expanding a page shows its top 10 queries; expanding a query shows the top 10 pages ranking for it. The Explore tab drills live instead, so its drilldown honours whatever date range and country/device filters are active.",
     "trend_days": 540
   },
 

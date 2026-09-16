@@ -164,5 +164,26 @@ export async function distinct(slug, f, dim) {
     GROUP BY k ORDER BY clicks DESC`);
 }
 
+/**
+ * Drill from one dimension into another — the top `limit` values of `into`
+ * for a single value of `dim`, under the same filters as the parent query.
+ *
+ * Live rather than precomputed, so it respects the active date range, country
+ * and device selection. The precomputed drilldowns on the Pages and Queries
+ * tabs are always the last 28 days unfiltered; this one is whatever is on
+ * screen.
+ */
+export async function drill(slug, f, dim, value, into, limit = 10) {
+  const src = source('query', slug, f);
+  if (!src) return [];
+  return run(`
+    SELECT ${into} AS k, ${METRICS}
+    FROM ${src}
+    WHERE ${where(f, 'query')} AND ${dim} = ${lit(value)} AND ${into} IS NOT NULL
+    GROUP BY k
+    ORDER BY clicks DESC, impressions DESC
+    LIMIT ${limit}`);
+}
+
 /** Escape hatch: run arbitrary SQL against the current property's files. */
 export async function raw(sql) { return run(sql); }

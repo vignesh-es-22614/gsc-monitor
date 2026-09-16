@@ -19,6 +19,10 @@ on:
         description: 'Skip the Search Console pull; rebuild the site from BigQuery only'
         type: boolean
         default: false
+      skip_parquet:
+        description: 'Skip the Explore-tab Parquet export (much faster first deploy)'
+        type: boolean
+        default: false
 
 # pages + id-token are what deploy-pages needs; contents stays read-only
 # because nothing is committed back any more.
@@ -96,8 +100,12 @@ jobs:
       # missing from the cache is rebuilt regardless, so a cold cache still
       # produces a complete set.
       - name: Export Parquet for the Explore tab
+        if: ${{ inputs.skip_parquet != true }}
         run: |
-          python export_parquet.py --days 365 --refresh-days 10 --out docs/data/pq
+          # --resume keeps whatever the cache restored, so a run that timed out
+          # picks up where it stopped instead of re-scanning from scratch.
+          python export_parquet.py --days 365 --refresh-days 10 --resume \
+            --out docs/data/pq
           du -sh docs/data/pq
 
       - name: Detect anomalies and email the digest
