@@ -791,7 +791,8 @@ async function exBoot(){
 }
 
 async function exRun(){
-  EX.busy = true; EX.err = null; renderExplore($('#tabbody'));
+  EX.busy = true; EX.err = null; EX.open = null; EX.drill = null;
+  repaintExplore();
   try{
     await exBoot();
     const f = EX.f, slug = S.prop;
@@ -807,9 +808,20 @@ async function exRun(){
     }
     EX.res = {tot, rows, series, grain,
       bytes: SQLMOD.bytesFor(grain, slug, f.from, f.to)};
-  }catch(e){ EX.err = e.message || String(e); }
-  EX.busy = false;
-  renderExplore($('#tabbody'));
+  }catch(e){
+    EX.err = e.message || String(e);
+  }finally{
+    // finally, not a trailing statement: a throw anywhere above used to leave
+    // busy stuck true, and the tab then showed a spinner that never cleared.
+    EX.busy = false;
+    repaintExplore();
+  }
+}
+
+/** Repaint only if the Explore tab is still on screen. */
+function repaintExplore(){
+  const tb = $('#tabbody');
+  if(tb && S.tab==='explore') renderExplore(tb);
 }
 
 function exportExploreCSV(){
@@ -826,6 +838,7 @@ function exportExploreCSV(){
 }
 
 function renderExplore(tb){
+  if(!tb) return;
   exDefaults();
   const f = EX.f, r = EX.res;
   const chips = (list, sel, dim) => list.length
@@ -971,11 +984,11 @@ function renderExplore(tb){
   tb.querySelectorAll('tr.clickable[data-k]').forEach(tr=>tr.onclick=async()=>{
     const k = tr.dataset.k;
     if(EX.open === k){ EX.open = null; EX.drill = null; renderExplore(tb); return; }
-    EX.open = k; EX.drill = null; renderExplore(tb);
+    EX.open = k; EX.drill = null; repaintExplore();
     const into = EX.groupBy==='page' ? 'query' : 'page';
     try{ EX.drill = await SQLMOD.drill(S.prop, EX.f, EX.groupBy, k, into, 10); }
     catch(e){ EX.drill = []; }
-    if(EX.open === k) renderExplore(tb);
+    if(EX.open === k) repaintExplore();
   });
 
   if(r && r.series.length){
