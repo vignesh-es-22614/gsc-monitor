@@ -72,6 +72,7 @@ SCOPES = [
 
 DEFAULT_PROJECT_ID = "it-security-online-marketing"
 DEFAULT_DATASET = "gsc_data"
+SITE_TABLE = "gsc_site_daily"
 PAGE_TABLE = "gsc_page_daily"
 QUERY_TABLE = "gsc_query_daily"
 
@@ -84,6 +85,15 @@ ROW_LIMIT = 25_000
 LAG_DAYS = 3
 
 # Dimensions as the API names them. ``site_url`` is added by us, not returned.
+#
+# SITE_DIMS carries no entity dimension at all, which is the only way to get
+# the figure Search Console's Performance overview shows. It is NOT the sum of
+# the page grain: one result listing two of your URLs (sitelinks, or two pages
+# ranking for the same query) is one impression at property grain and two at
+# page grain. For ad-manager over 28 days that gap is +17.8% on impressions,
+# +4.6% on clicks, and 10.3 vs 12.2 on average position. Both are correct; they
+# answer different questions, and people quote this one.
+SITE_DIMS = ["date"]
 PAGE_DIMS = ["date", "page"]
 QUERY_DIMS = ["date", "page", "query", "country", "device"]
 
@@ -427,9 +437,14 @@ def main() -> None:
     p.add_argument("--dataset", default=DEFAULT_DATASET)
     p.add_argument(
         "--grain",
-        choices=["page", "query", "both"],
-        default="both",
-        help="page = correct totals; query = detail; both (default).",
+        choices=["site", "page", "query", "both", "all"],
+        default="all",
+        help=(
+            "site = property totals matching the UI's Performance overview; "
+            "page = per-page totals matching the UI's Pages report; "
+            "query = query/country/device detail; both = page+query; "
+            "all (default) = every grain."
+        ),
     )
     p.add_argument(
         "--workers",
@@ -479,14 +494,18 @@ def main() -> None:
         sys.exit("Pass --site (repeatable) or --all-sites. See --list-sites.")
 
     bq = bigquery.Client(project=args.project, credentials=creds)
+    site_id = f"{args.project}.{args.dataset}.{SITE_TABLE}"
     page_id = f"{args.project}.{args.dataset}.{PAGE_TABLE}"
     query_id = f"{args.project}.{args.dataset}.{QUERY_TABLE}"
 
     grains = []
-    if args.grain in ("page", "both"):
+    if args.grain in ("site", "all"):
+        ensure_table(bq, site_id, SITE_DIMS)
+        grains.append(("site", site_id, SITE_DIMS))
+    if args.grain in ("page", "both", "all"):
         ensure_table(bq, page_id, PAGE_DIMS)
         grains.append(("page", page_id, PAGE_DIMS))
-    if args.grain in ("query", "both"):
+    if args.grain in ("query", "both", "all"):
         ensure_table(bq, query_id, QUERY_DIMS)
         grains.append(("query", query_id, QUERY_DIMS))
 
@@ -564,7 +583,7 @@ def main() -> None:
     print(f"\ndone -- {grand_total:,} rows in {elapsed}")
 
     # Show page totals per property so they can be eyeballed against the UI.
-    if args.grain in ("page", "both"):
+    if args.grain in ("page", "both", "all"):
         print("\nLast 30 days by property (check vs Search Console > Pages):")
         sql = f"""
         SELECT site_url, SUM(clicks) clicks, SUM(impressions) impressions,

@@ -23,6 +23,36 @@
 -- row is counted twice. Group by site_url, or filter to one property.
 
 -- --------------------------------------------------------------------------
+-- Property grain: the number Search Console's Performance overview shows, and
+-- the one people quote.
+--
+-- It is NOT the sum of v_page_daily, and the difference is not an error. A
+-- single result listing two of your URLs -- sitelinks, or two pages ranking
+-- for one query -- is ONE impression at property grain and TWO at page grain.
+-- Measured on ad-manager, 2026-08-17 to 2026-09-13:
+--
+--     property grain   16,405 clicks   1,227,982 impressions   pos 10.3
+--     page grain       17,160 clicks   1,447,009 impressions   pos 12.2
+--
+-- Both reconcile exactly against the Search Console API. Use this view for a
+-- headline figure and v_page_daily for anything per-page.
+-- --------------------------------------------------------------------------
+CREATE OR REPLACE VIEW `it-security-online-marketing.gsc_data.v_site_daily` AS
+SELECT
+  date,
+  site_url,
+  clicks,
+  impressions,
+  SAFE_DIVIDE(clicks, impressions) AS ctr,
+  position,
+  loaded_at
+FROM `it-security-online-marketing.gsc_data.gsc_site_daily`
+WHERE site_url IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (
+  PARTITION BY site_url, date
+  ORDER BY loaded_at DESC NULLS LAST) = 1;
+
+-- --------------------------------------------------------------------------
 -- Page grain: the number you quote.
 --
 -- DEDUPLICATING BY DESIGN. More than one loader writes these tables -- both
