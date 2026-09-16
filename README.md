@@ -9,14 +9,52 @@ Console properties, sourced from BigQuery.
   detects anomalies, emails a digest via Zoho SMTP, commits the result.
 
 ```
-gsc_export.py        Search Console  ->  BigQuery   (two grains, all properties)
+gsc_export.py        Search Console  ->  BigQuery   (three grains, all properties)
 api_source.py        Search Console  ->  payload    (fallback for properties BQ lacks)
-build_payload.py     BigQuery        ->  docs/data/*.json
+build_payload.py     BigQuery        ->  docs/data/*.json   (dashboard payload)
+export_parquet.py    BigQuery        ->  docs/data/pq/*.parquet  (Explore tab)
+export_data.py       BigQuery        ->  CSV, no row cap
 alerts.py            BigQuery        ->  docs/data/alerts.json + email
 docs/index.html      the dashboard   (vanilla JS, no build step)
+docs/sql.js          DuckDB-WASM query layer for the Explore tab
 sql/01_views.sql     reporting views over the raw tables
 alerts.config.json   thresholds, recipients, payload sizes
 ```
+
+### Nothing generated is committed
+
+`docs/data/` is gitignored. The dashboard payload is ~126 MB and the Parquet
+another ~400 MB; committing that daily would add tens of gigabytes of repo
+churn a year. The Action builds both and publishes them to Pages as an
+artifact, so **the repository's Pages source must be set to `GitHub Actions`**,
+not "deploy from a branch".
+
+The Parquet is carried between runs with `actions/cache`, and
+`export_parquet.py --refresh-days 10` rewrites only the month files Search
+Console actually revised. A full year costs roughly 50 GB of BigQuery scan; on
+a cold cache that is a one-off, but doing it daily would exhaust the 1 TB free
+tier by itself.
+
+### Three ways to get at the data
+
+| Want | Use |
+|---|---|
+| A fixed window, fast, already aggregated | the **Pages** / **Queries** tabs |
+| An arbitrary slice — any dates, country, device, page and query together | the **Explore** tab |
+| Everything, into Excel or a script | `export_data.py` |
+
+The Explore tab runs **DuckDB-WASM in the browser** against the Parquet files
+over HTTP range requests: it reads the footer, decides which row groups can
+match from their statistics, and fetches only those byte ranges. That is why a
+static site can answer questions over 73M rows without a backend. Files are
+split one per (grain, property, month) and sorted on the filter columns, so a
+28-day question opens one or two files and reads a fraction of each.
+
+Its limits, stated plainly: the published Parquet covers a **rolling 365 days**
+(older history stays in BigQuery — reach it with `export_data.py`), and
+anything filtered by country or device necessarily reads the query grain, which
+omits anonymised queries and therefore under-counts. Page and property figures
+elsewhere in the dashboard are exact.
 
 ### Read the views, never the raw tables
 

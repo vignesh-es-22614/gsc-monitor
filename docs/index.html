@@ -157,6 +157,29 @@ input::placeholder{color:var(--muted)}
 .alert .msg{font-size:12.5px;color:var(--ink-2);margin-top:2px}
 .alert .prop{font-size:11px;color:var(--muted);margin-top:2px}
 
+/* ------------------------------------------------------------- explore */
+.exgrid{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.exgrid label{display:flex;flex-direction:column;gap:4px;font-size:11px;
+  text-transform:uppercase;letter-spacing:.045em;color:var(--muted);font-weight:600}
+.exgrid input[type=date],.exgrid select,.exgrid input[type=search]{
+  background:var(--surface-2);border:1px solid var(--border);color:var(--ink);
+  border-radius:8px;padding:7px 10px;font:13px var(--font);text-transform:none;
+  letter-spacing:0;font-weight:400}
+.exgrid .pair{display:flex;gap:6px}
+.exgrid .pair input[type=search]{min-width:210px}
+.iconbtn.primary{background:var(--s1);border-color:var(--s1);color:#fff;font-weight:600}
+.facet{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:11px;
+  padding-top:11px;border-top:1px solid var(--border)}
+.facet b{font-size:11px;text-transform:uppercase;letter-spacing:.045em;
+  color:var(--muted);margin-right:4px;min-width:58px}
+.chip{border:1px solid var(--border);background:var(--surface-2);color:var(--ink-2);
+  border-radius:999px;padding:4px 10px;font:12px var(--font);cursor:pointer;
+  display:inline-flex;gap:6px;align-items:baseline}
+.chip span{color:var(--muted);font-size:10.5px;font-variant-numeric:tabular-nums}
+.chip:hover{color:var(--ink)}
+.chip.on{background:var(--s1);border-color:var(--s1);color:#fff}
+.chip.on span{color:rgba(255,255,255,.75)}
+
 .empty{padding:26px 15px;color:var(--muted);font-size:13px;text-align:center}
 .banner{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
   padding:11px 14px;font-size:12.5px;color:var(--ink-2);margin-bottom:14px;display:flex;gap:9px}
@@ -576,6 +599,7 @@ function propView(){
       <button data-tab="pages" aria-selected="${S.tab==='pages'}">Pages</button>
       <button data-tab="queries" aria-selected="${S.tab==='queries'}">Queries</button>
       <button data-tab="breakdown" aria-selected="${S.tab==='breakdown'}">Country &amp; device</button>
+      <button data-tab="explore" aria-selected="${S.tab==='explore'}">Explore</button>
       <button data-tab="alerts" aria-selected="${S.tab==='alerts'}">Alerts</button>
     </div>
     <div id="tabbody"></div>`;
@@ -739,6 +763,192 @@ function breakdownView(){
   </div>`;
 }
 
+// ============================================================== explore ===
+// Arbitrary questions, answered by DuckDB-WASM over the Parquet files rather
+// than by a precomputed window. Everything here is a live SQL query.
+let SQLMOD = null;
+const EX = {
+  ready:false, status:'', err:null, busy:false, res:null,
+  f:{ from:'', to:'', page:'', pageOp:'contains', query:'', queryOp:'contains',
+      join:'any', countries:[], devices:[] },
+  groupBy:'query', limit:1000, opts:{countries:[], devices:[]},
+};
+
+function exDefaults(){
+  if(EX.f.to) return;
+  const to = S.summary.latest_date;
+  const d = new Date(to + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 27);
+  EX.f.to = to;
+  EX.f.from = d.toISOString().slice(0,10);
+}
+
+async function exBoot(){
+  if(EX.ready) return;
+  SQLMOD = SQLMOD || await import('./sql.js');
+  await SQLMOD.boot(s=>{ EX.status=s; const n=$('#exstatus'); if(n) n.textContent=s; });
+  EX.ready = true;
+}
+
+async function exRun(){
+  EX.busy = true; EX.err = null; renderExplore($('#tabbody'));
+  try{
+    await exBoot();
+    const f = EX.f, slug = S.prop;
+    const grain = EX.groupBy==='page' ? 'page' : 'query';
+    const [tot, rows, series] = await Promise.all([
+      SQLMOD.totals(slug, f, grain),
+      SQLMOD.group(slug, f, EX.groupBy, EX.limit),
+      SQLMOD.daily(slug, f, grain),
+    ]);
+    if(!EX.opts.countries.length){
+      EX.opts.countries = (await SQLMOD.distinct(slug, f, 'country')).slice(0,60);
+      EX.opts.devices  = await SQLMOD.distinct(slug, f, 'device');
+    }
+    EX.res = {tot, rows, series, grain,
+      bytes: SQLMOD.bytesFor(grain, slug, f.from, f.to)};
+  }catch(e){ EX.err = e.message || String(e); }
+  EX.busy = false;
+  renderExplore($('#tabbody'));
+}
+
+function exportExploreCSV(){
+  const rows = EX.res?.rows || []; if(!rows.length) return;
+  const head = [EX.groupBy,'clicks','impressions','ctr','position'];
+  const body = rows.map(r=>[r.k, r.clicks, r.impressions,
+    r.ctr==null?'':r.ctr, r.position==null?'':r.position].map(csvCell).join(','));
+  const blob = new Blob(['﻿'+head.join(',')+'\n'+body.join('\n')],
+    {type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = `gsc_explore_${S.propData.label.replace(/[^a-z0-9]+/gi,'-')}_${EX.groupBy}_${EX.f.from}_${EX.f.to}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },0);
+}
+
+function renderExplore(tb){
+  exDefaults();
+  const f = EX.f, r = EX.res;
+  const chips = (list, sel, dim) => list.length
+    ? list.map(o=>`<button class="chip${sel.includes(o.k)?' on':''}"
+        data-dim="${dim}" data-val="${esc(o.k)}">${esc(o.k)}
+        <span>${fmt(o.clicks)}</span></button>`).join('')
+    : '<span style="color:var(--muted);font-size:12px">run a query to load values</span>';
+
+  tb.innerHTML = `
+  <div class="card" style="margin-bottom:14px">
+    <h2>Explore <span class="note">live SQL over the raw rows — any date range,
+      any combination of filters. Nothing here is precomputed.</span></h2>
+    <div class="body">
+      <div class="exgrid">
+        <label>From<input type="date" id="ex_from" value="${esc(f.from)}"
+          min="${esc(S.summary.properties[0]?.earliest_date||'')}" max="${esc(S.summary.latest_date)}"></label>
+        <label>To<input type="date" id="ex_to" value="${esc(f.to)}"
+          max="${esc(S.summary.latest_date)}"></label>
+        <label>Group by<select id="ex_group">
+          ${['query','page','country','device'].map(g=>
+            `<option value="${g}" ${EX.groupBy===g?'selected':''}>${g}</option>`).join('')}
+        </select></label>
+        <label>Row limit<select id="ex_limit">
+          ${[1000,10000,100000,0].map(n=>
+            `<option value="${n}" ${EX.limit===n?'selected':''}>${n?fmt(n):'no limit'}</option>`).join('')}
+        </select></label>
+      </div>
+      <div class="exgrid" style="margin-top:9px">
+        <label>Page<span class="pair">
+          <select id="ex_pageop">
+            <option value="contains" ${f.pageOp==='contains'?'selected':''}>contains</option>
+            <option value="not" ${f.pageOp==='not'?'selected':''}>does not contain</option>
+          </select>
+          <input type="search" id="ex_page" value="${esc(f.page)}" placeholder="/kb/, help">
+        </span></label>
+        <label>Query<span class="pair">
+          <select id="ex_queryop">
+            <option value="contains" ${f.queryOp==='contains'?'selected':''}>contains</option>
+            <option value="not" ${f.queryOp==='not'?'selected':''}>does not contain</option>
+          </select>
+          <input type="search" id="ex_query" value="${esc(f.query)}" placeholder="locked out, adaudit">
+        </span></label>
+        <label>Terms<select id="ex_join">
+          <option value="any" ${f.join==='any'?'selected':''}>match any</option>
+          <option value="all" ${f.join==='all'?'selected':''}>match all</option>
+        </select></label>
+        <label>&nbsp;<button class="iconbtn primary" id="ex_run">${EX.busy?'Running…':'Apply filters'}</button></label>
+      </div>
+
+      <div class="facet"><b>Device</b> ${chips(EX.opts.devices, f.devices, 'devices')}</div>
+      <div class="facet"><b>Country</b> ${chips(EX.opts.countries, f.countries, 'countries')}</div>
+      ${(f.countries.length||f.devices.length||f.page||f.query)
+        ? '<button class="iconbtn" id="ex_reset" style="margin-top:9px">Clear filters</button>' : ''}
+    </div>
+  </div>` +
+
+  (EX.err ? `<div class="card"><div class="empty">
+      <b style="color:var(--critical)">Query failed.</b><br>${esc(EX.err)}</div></div>`
+   : EX.busy ? `<div class="card"><div class="spinner">
+      ${esc(EX.status||'Querying…')}</div></div>`
+   : !r ? `<div class="card"><div class="empty">
+      Set a range and press <b>Apply filters</b>. The first run downloads the
+      query engine (~3 MB) and only the month files your range touches.</div></div>`
+   : `<div class="tiles">
+        <div class="tile"><div class="k">Clicks</div><div class="v">${fmt(r.tot?.clicks)}</div>
+          <div class="d">${esc(f.from)} → ${esc(f.to)}</div></div>
+        <div class="tile"><div class="k">Impressions</div><div class="v">${fmt(r.tot?.impressions)}</div>
+          <div class="d">${r.grain==='query'?'query grain — understated':'page grain — exact'}</div></div>
+        <div class="tile"><div class="k">CTR</div>
+          <div class="v">${r.tot?.ctr!=null?(r.tot.ctr*100).toFixed(2)+'%':'–'}</div></div>
+        <div class="tile"><div class="k">Avg position</div>
+          <div class="v">${fmt1(r.tot?.position)}</div><div class="d">lower is better</div></div>
+        <div class="tile"><div class="k">Rows</div><div class="v">${fmt(r.rows.length)}</div>
+          <div class="d">scanned ${(r.bytes/1e6).toFixed(1)} MB of parquet</div></div>
+      </div>
+      <div class="card" style="margin-bottom:14px"><figure>
+        <figcaption>Clicks per day <span class="hint">filtered</span></figcaption>
+        <div id="ex_chart"></div></figure></div>
+      <div class="card">
+        <h2>By ${esc(EX.groupBy)} <span class="note">${fmt(r.rows.length)} rows${
+          EX.limit && r.rows.length>=EX.limit ? ' — limit reached, raise it above' : ''}</span>
+          <span style="margin-left:auto"><button class="iconbtn" id="ex_dl">↓ CSV · ${fmt(r.rows.length)} rows</button></span></h2>
+        <div class="tablewrap"><table><thead><tr>
+          <th>${esc(EX.groupBy)}</th><th class="num">Clicks</th><th class="num">Impressions</th>
+          <th class="num">CTR</th><th class="num">Avg pos</th></tr></thead><tbody>` +
+        r.rows.slice(0,500).map(x=>`<tr><td class="ent" title="${esc(x.k)}">${
+            esc(EX.groupBy==='page' ? (String(x.k).replace(S.propData.site_url,'')||'/') : x.k)}</td>
+          <td class="num">${fmt(x.clicks)}</td><td class="num">${fmt(x.impressions)}</td>
+          <td class="num">${x.ctr!=null?(x.ctr*100).toFixed(2)+'%':'–'}</td>
+          <td class="num">${fmt1(x.position)}</td></tr>`).join('') +
+        `</tbody></table></div>
+        ${r.rows.length>500?`<div style="padding:11px;text-align:center;color:var(--muted);font-size:12px">
+          500 of ${fmt(r.rows.length)} shown · CSV has all of them</div>`:''}
+      </div>`);
+
+  // --- wiring -------------------------------------------------------------
+  const bind = (id, fn, ev='onchange') => { const el=tb.querySelector('#'+id); if(el) el[ev]=fn; };
+  bind('ex_from', e=>{ f.from = e.target.value; });
+  bind('ex_to',   e=>{ f.to   = e.target.value; });
+  bind('ex_page', e=>{ f.page = e.target.value; }, 'oninput');
+  bind('ex_query',e=>{ f.query= e.target.value; }, 'oninput');
+  bind('ex_pageop',  e=>{ f.pageOp  = e.target.value; });
+  bind('ex_queryop', e=>{ f.queryOp = e.target.value; });
+  bind('ex_join',    e=>{ f.join    = e.target.value; });
+  bind('ex_group',   e=>{ EX.groupBy = e.target.value; });
+  bind('ex_limit',   e=>{ EX.limit = +e.target.value; });
+  bind('ex_run', exRun, 'onclick');
+  bind('ex_dl', exportExploreCSV, 'onclick');
+  bind('ex_reset', ()=>{ f.page=''; f.query=''; f.countries=[]; f.devices=[];
+    renderExplore(tb); }, 'onclick');
+  tb.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    const arr = f[c.dataset.dim], v = c.dataset.val, i = arr.indexOf(v);
+    if(i<0) arr.push(v); else arr.splice(i,1);
+    renderExplore(tb);
+  });
+
+  if(r && r.series.length){
+    lineChart($('#ex_chart'),
+      [{name:'Clicks', color:'var(--s1)', fill:'var(--fill-1)',
+        pts:r.series.map(x=>[x.d, x.clicks])}],
+      {zeroBase:true, label:'Clicks per day'});
+  }
+}
+
 function alertsView(scopeSite){
   const a = S.summary.alerts;
   if(!a) return `<div class="card"><div class="empty">Alerting has not run yet.</div></div>`;
@@ -871,6 +1081,8 @@ function render(){
     tb.querySelectorAll('tr.clickable[data-key]').forEach(tr=>tr.onclick=()=>{
       S.openPage = S.openPage===tr.dataset.key ? null : tr.dataset.key; render();
     });
+  } else if(S.tab==='explore'){
+    renderExplore(tb);
   } else if(S.tab==='breakdown'){
     tb.innerHTML = breakdownView();
     if($('#bd_country')) barChart($('#bd_country'), S.propData.country.map(r=>({k:r.k,v:r.c})));
