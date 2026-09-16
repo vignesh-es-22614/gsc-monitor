@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-16T07:58:20+00:00",
+ "generated_at": "2026-09-16T09:57:56+00:00",
  "latest_date": "2026-09-13",
  "windows": [
   7,
@@ -22,15 +22,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 1047363,
-     "clicks_prev": 1125387,
-     "impressions": 60861365,
-     "impressions_prev": 73878810,
-     "position": 11.71,
-     "position_prev": 10.48,
-     "pages": 36455
-    },
     "7": {
      "clicks": 78242,
      "clicks_prev": 79816,
@@ -39,6 +30,15 @@
      "position": 10.52,
      "position_prev": 11.03,
      "pages": 12764
+    },
+    "90": {
+     "clicks": 1047363,
+     "clicks_prev": 1125387,
+     "impressions": 60861365,
+     "impressions_prev": 73878810,
+     "position": 11.71,
+     "position_prev": 10.48,
+     "pages": 36455
     },
     "28": {
      "clicks": 313801,
@@ -65,15 +65,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 143476,
-     "clicks_prev": 169731,
-     "impressions": 8717850,
-     "impressions_prev": 10480125,
-     "position": 9.08,
-     "position_prev": 7.79,
-     "pages": 24501
-    },
     "7": {
      "clicks": 9935,
      "clicks_prev": 9519,
@@ -82,6 +73,15 @@
      "position": 7.5,
      "position_prev": 8.4,
      "pages": 10504
+    },
+    "90": {
+     "clicks": 143476,
+     "clicks_prev": 169731,
+     "impressions": 8717850,
+     "impressions_prev": 10480125,
+     "position": 9.08,
+     "position_prev": 7.79,
+     "pages": 24501
     },
     "28": {
      "clicks": 38800,
@@ -108,15 +108,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 57004,
-     "clicks_prev": 61343,
-     "impressions": 5685954,
-     "impressions_prev": 7296114,
-     "position": 10.58,
-     "position_prev": 8.68,
-     "pages": 2568
-    },
     "7": {
      "clicks": 4048,
      "clicks_prev": 5142,
@@ -125,6 +116,15 @@
      "position": 9.36,
      "position_prev": 9.34,
      "pages": 2051
+    },
+    "90": {
+     "clicks": 57004,
+     "clicks_prev": 61343,
+     "impressions": 5685954,
+     "impressions_prev": 7296114,
+     "position": 10.58,
+     "position_prev": 8.68,
+     "pages": 2568
     },
     "28": {
      "clicks": 17718,
@@ -151,15 +151,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 59205,
-     "clicks_prev": 64420,
-     "impressions": 6659249,
-     "impressions_prev": 9540025,
-     "position": 17.1,
-     "position_prev": 14.41,
-     "pages": 1692
-    },
     "7": {
      "clicks": 4324,
      "clicks_prev": 4437,
@@ -168,6 +159,15 @@
      "position": 16.36,
      "position_prev": 16.84,
      "pages": 1339
+    },
+    "90": {
+     "clicks": 59205,
+     "clicks_prev": 64420,
+     "impressions": 6659249,
+     "impressions_prev": 9540025,
+     "position": 17.1,
+     "position_prev": 14.41,
+     "pages": 1692
     },
     "28": {
      "clicks": 17432,
@@ -194,15 +194,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 59274,
-     "clicks_prev": 62503,
-     "impressions": 5002786,
-     "impressions_prev": 5846691,
-     "position": 10.83,
-     "position_prev": 9.12,
-     "pages": 3549
-    },
     "7": {
      "clicks": 4039,
      "clicks_prev": 4423,
@@ -211,6 +202,15 @@
      "position": 9.11,
      "position_prev": 9.69,
      "pages": 2688
+    },
+    "90": {
+     "clicks": 59274,
+     "clicks_prev": 62503,
+     "impressions": 5002786,
+     "impressions_prev": 5846691,
+     "position": 10.83,
+     "position_prev": 9.12,
+     "pages": 3549
     },
     "28": {
      "clicks": 17160,
@@ -237,15 +237,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 43802,
-     "clicks_prev": 52499,
-     "impressions": 7753732,
-     "impressions_prev": 10380915,
-     "position": 9.97,
-     "position_prev": 8.21,
-     "pages": 2767
-    },
     "7": {
      "clicks": 2848,
      "clicks_prev": 3004,
@@ -254,6 +245,15 @@
      "position": 8.84,
      "position_prev": 8.9,
      "pages": 1932
+    },
+    "90": {
+     "clicks": 43802,
+     "clicks_prev": 52499,
+     "impressions": 7753732,
+     "impressions_prev": 10380915,
+     "position": 9.97,
+     "position_prev": 8.21,
+     "pages": 2767
     },
     "28": {
      "clicks": 11602,
@@ -280,15 +280,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 36003,
-     "clicks_prev": 39345,
-     "impressions": 3501515,
-     "impressions_prev": 5590801,
-     "position": 15.33,
-     "position_prev": 11.83,
-     "pages": 5386
-    },
     "7": {
      "clicks": 2548,
      "clicks_prev": 2706,
@@ -297,6 +288,15 @@
      "position": 13.35,
      "position_prev": 14.41,
      "pages": 3675
+    },
+    "90": {
+     "clicks": 36003,
+     "clicks_prev": 39345,
+     "impressions": 3501515,
+     "impressions_prev": 5590801,
+     "position": 15.33,
+     "position_prev": 11.83,
+     "pages": 5386
     },
     "28": {
      "clicks": 10823,
@@ -323,15 +323,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 33726,
-     "clicks_prev": 36083,
-     "impressions": 2755862,
-     "impressions_prev": 5086018,
-     "position": 12.84,
-     "position_prev": 9.56,
-     "pages": 2029
-    },
     "7": {
      "clicks": 2314,
      "clicks_prev": 2539,
@@ -340,6 +331,15 @@
      "position": 11.57,
      "position_prev": 12.36,
      "pages": 1517
+    },
+    "90": {
+     "clicks": 33726,
+     "clicks_prev": 36083,
+     "impressions": 2755862,
+     "impressions_prev": 5086018,
+     "position": 12.84,
+     "position_prev": 9.56,
+     "pages": 2029
     },
     "28": {
      "clicks": 10034,
@@ -366,15 +366,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 6107,
-     "clicks_prev": 6081,
-     "impressions": 988020,
-     "impressions_prev": 1099099,
-     "position": 25.28,
-     "position_prev": 20.37,
-     "pages": 555
-    },
     "7": {
      "clicks": 481,
      "clicks_prev": 488,
@@ -383,6 +374,15 @@
      "position": 24.15,
      "position_prev": 26.32,
      "pages": 470
+    },
+    "90": {
+     "clicks": 6107,
+     "clicks_prev": 6081,
+     "impressions": 988020,
+     "impressions_prev": 1099099,
+     "position": 25.28,
+     "position_prev": 20.37,
+     "pages": 555
     },
     "28": {
      "clicks": 1948,
@@ -409,15 +409,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 3441,
-     "clicks_prev": 4202,
-     "impressions": 360516,
-     "impressions_prev": 425630,
-     "position": 22.26,
-     "position_prev": 16.91,
-     "pages": 548
-    },
     "7": {
      "clicks": 254,
      "clicks_prev": 232,
@@ -426,6 +417,15 @@
      "position": 21.25,
      "position_prev": 22.57,
      "pages": 452
+    },
+    "90": {
+     "clicks": 3441,
+     "clicks_prev": 4202,
+     "impressions": 360516,
+     "impressions_prev": 425630,
+     "position": 22.26,
+     "position_prev": 16.91,
+     "pages": 548
     },
     "28": {
      "clicks": 930,
@@ -452,15 +452,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 2671,
-     "clicks_prev": 3043,
-     "impressions": 93051,
-     "impressions_prev": 97245,
-     "position": 13.51,
-     "position_prev": 12.82,
-     "pages": 66
-    },
     "7": {
      "clicks": 192,
      "clicks_prev": 175,
@@ -469,6 +460,15 @@
      "position": 13.51,
      "position_prev": 12.13,
      "pages": 52
+    },
+    "90": {
+     "clicks": 2671,
+     "clicks_prev": 3043,
+     "impressions": 93051,
+     "impressions_prev": 97245,
+     "position": 13.51,
+     "position_prev": 12.82,
+     "pages": 66
     },
     "28": {
      "clicks": 738,
@@ -495,15 +495,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 1989,
-     "clicks_prev": 2068,
-     "impressions": 133404,
-     "impressions_prev": 157745,
-     "position": 20.03,
-     "position_prev": 15.94,
-     "pages": 210
-    },
     "7": {
      "clicks": 160,
      "clicks_prev": 164,
@@ -512,6 +503,15 @@
      "position": 19.61,
      "position_prev": 19.58,
      "pages": 171
+    },
+    "90": {
+     "clicks": 1989,
+     "clicks_prev": 2068,
+     "impressions": 133404,
+     "impressions_prev": 157745,
+     "position": 20.03,
+     "position_prev": 15.94,
+     "pages": 210
     },
     "28": {
      "clicks": 652,
@@ -538,15 +538,6 @@
    "missing_days": 0,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 1305,
-     "clicks_prev": 1343,
-     "impressions": 32805,
-     "impressions_prev": 32758,
-     "position": 7.78,
-     "position_prev": 7.85,
-     "pages": 8
-    },
     "7": {
      "clicks": 71,
      "clicks_prev": 100,
@@ -555,6 +546,15 @@
      "position": 8.01,
      "position_prev": 7.41,
      "pages": 6
+    },
+    "90": {
+     "clicks": 1305,
+     "clicks_prev": 1343,
+     "impressions": 32805,
+     "impressions_prev": 32758,
+     "position": 7.78,
+     "position_prev": 7.85,
+     "pages": 8
     },
     "28": {
      "clicks": 370,
@@ -581,15 +581,6 @@
    "missing_days": 40,
    "source": "bigquery",
    "windows": {
-    "90": {
-     "clicks": 0,
-     "clicks_prev": 4,
-     "impressions": 122,
-     "impressions_prev": 1679,
-     "position": 10.28,
-     "position_prev": 18.98,
-     "pages": 38
-    },
     "7": {
      "clicks": 0,
      "clicks_prev": 0,
@@ -598,6 +589,15 @@
      "position": 3.85,
      "position_prev": 7.45,
      "pages": 8
+    },
+    "90": {
+     "clicks": 0,
+     "clicks_prev": 4,
+     "impressions": 122,
+     "impressions_prev": 1679,
+     "position": 10.28,
+     "position_prev": 18.98,
+     "pages": 38
     },
     "28": {
      "clicks": 0,
@@ -619,7 +619,7 @@
   "history": "Page-grain history starts 2025-04-29; the Search Console API serves only a rolling ~16 months and nothing earlier can ever be recovered. ADAP has 2022-2025 history from an older export that under-counts, shown separately and never spliced on."
  },
  "alerts": {
-  "generated_at": "2026-09-16T09:44:07+00:00",
+  "generated_at": "2026-09-16T09:58:24+00:00",
   "latest_date": "2026-09-13",
   "compare_days": 7,
   "thresholds": {
@@ -657,7 +657,7 @@
   },
   "counts": {
    "critical": 4,
-   "warning": 92,
+   "warning": 97,
    "info": 0
   },
   "alerts": [
@@ -1348,24 +1348,24 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://pitstop.manageengine.com/",
-    "entity": "link w88 ko b\u1ecb ch\u1eb7n",
-    "metric": "clicks",
-    "current": 3,
-    "previous": 18,
-    "delta_pct": -83.3,
-    "message": "Clicks 18 -> 3 (-83.3%)",
-    "lost_clicks": 15
-   },
-   {
-    "severity": "warning",
-    "scope": "query",
-    "site_url": "https://pitstop.manageengine.com/",
     "entity": "snow rider 3d",
     "metric": "clicks",
     "current": 15,
     "previous": 30,
     "delta_pct": -50.0,
     "message": "Clicks 30 -> 15 (-50.0%)",
+    "lost_clicks": 15
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://pitstop.manageengine.com/",
+    "entity": "link w88 ko b\u1ecb ch\u1eb7n",
+    "metric": "clicks",
+    "current": 3,
+    "previous": 18,
+    "delta_pct": -83.3,
+    "message": "Clicks 18 -> 3 (-83.3%)",
     "lost_clicks": 15
    },
    {
@@ -1492,18 +1492,6 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/",
-    "entity": "0x80004005",
-    "metric": "clicks",
-    "current": 20,
-    "previous": 37,
-    "delta_pct": -45.9,
-    "message": "Clicks 37 -> 20 (-45.9%)",
-    "lost_clicks": 17
-   },
-   {
-    "severity": "warning",
-    "scope": "query",
-    "site_url": "https://www.manageengine.com/",
     "entity": "opmanager upgrade packs",
     "metric": "clicks",
     "current": 3,
@@ -1528,13 +1516,85 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/",
-    "entity": "mac-023",
+    "entity": "0x80004005",
     "metric": "clicks",
-    "current": 1,
-    "previous": 17,
-    "delta_pct": -94.1,
-    "message": "Clicks 17 -> 1 (-94.1%)",
+    "current": 20,
+    "previous": 37,
+    "delta_pct": -45.9,
+    "message": "Clicks 37 -> 20 (-45.9%)",
+    "lost_clicks": 17
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/",
+    "entity": "endpoint central distribution server",
+    "metric": "clicks",
+    "current": 3,
+    "previous": 19,
+    "delta_pct": -84.2,
+    "message": "Clicks 19 -> 3 (-84.2%)",
     "lost_clicks": 16
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/data-security/",
+    "entity": "data leakage prevention",
+    "metric": "position",
+    "current": 68.03,
+    "previous": 39.25,
+    "delta_pct": null,
+    "message": "Position 39.3 -> 68.0 (worse by 28.8)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/data-security/",
+    "entity": "data loss prevention",
+    "metric": "position",
+    "current": 90.8,
+    "previous": 87.04,
+    "delta_pct": null,
+    "message": "Position 87.0 -> 90.8 (worse by 3.8)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/log-management/",
+    "entity": "log360 service pack",
+    "metric": "clicks",
+    "current": 28,
+    "previous": 51,
+    "delta_pct": -45.1,
+    "message": "Clicks 51 -> 28 (-45.1%)",
+    "lost_clicks": 23
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/log-management/",
+    "entity": "log360 release notes",
+    "metric": "clicks",
+    "current": 11,
+    "previous": 31,
+    "delta_pct": -64.5,
+    "message": "Clicks 31 -> 11 (-64.5%)",
+    "lost_clicks": 20
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/log-management/",
+    "entity": "insider threat",
+    "metric": "position",
+    "current": 24.45,
+    "previous": 19.44,
+    "delta_pct": null,
+    "message": "Position 19.4 -> 24.4 (worse by 5.0)",
+    "lost_clicks": 0
    },
    {
     "severity": "warning",
@@ -1576,6 +1636,42 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "ad audit plus",
+    "metric": "position",
+    "current": 30.84,
+    "previous": 18.61,
+    "delta_pct": null,
+    "message": "Position 18.6 -> 30.8 (worse by 12.2)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "kerberos authentication",
+    "metric": "position",
+    "current": 29.34,
+    "previous": 15.28,
+    "delta_pct": null,
+    "message": "Position 15.3 -> 29.3 (worse by 14.1)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
+    "entity": "adaudit plus service pack",
+    "metric": "position",
+    "current": 13.75,
+    "previous": 3.87,
+    "delta_pct": null,
+    "message": "Position 3.9 -> 13.7 (worse by 9.9)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
     "entity": "active directory auditing",
     "metric": "position",
     "current": 20.31,
@@ -1600,48 +1696,12 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/products/active-directory-audit/",
-    "entity": "ad audit plus",
-    "metric": "position",
-    "current": 30.84,
-    "previous": 18.61,
-    "delta_pct": null,
-    "message": "Position 18.6 -> 30.8 (worse by 12.2)",
-    "lost_clicks": 0
-   },
-   {
-    "severity": "warning",
-    "scope": "query",
-    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
-    "entity": "adaudit plus service pack",
-    "metric": "position",
-    "current": 13.75,
-    "previous": 3.87,
-    "delta_pct": null,
-    "message": "Position 3.9 -> 13.7 (worse by 9.9)",
-    "lost_clicks": 0
-   },
-   {
-    "severity": "warning",
-    "scope": "query",
-    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
     "entity": "adaudit",
     "metric": "position",
     "current": 32.6,
     "previous": 21.64,
     "delta_pct": null,
     "message": "Position 21.6 -> 32.6 (worse by 11.0)",
-    "lost_clicks": 0
-   },
-   {
-    "severity": "warning",
-    "scope": "query",
-    "site_url": "https://www.manageengine.com/products/active-directory-audit/",
-    "entity": "kerberos authentication",
-    "metric": "position",
-    "current": 29.34,
-    "previous": 15.28,
-    "delta_pct": null,
-    "message": "Position 15.3 -> 29.3 (worse by 14.1)",
     "lost_clicks": 0
    },
    {
@@ -1684,12 +1744,12 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/products/eventlog/",
-    "entity": "eventlog analyzer",
+    "entity": "database activity monitoring",
     "metric": "position",
-    "current": 20.05,
-    "previous": 11.7,
+    "current": 18.41,
+    "previous": 12.45,
     "delta_pct": null,
-    "message": "Position 11.7 -> 20.0 (worse by 8.3)",
+    "message": "Position 12.5 -> 18.4 (worse by 6.0)",
     "lost_clicks": 0
    },
    {
@@ -1708,48 +1768,36 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/products/eventlog/",
-    "entity": "database activity monitoring",
+    "entity": "eventlog analyzer",
     "metric": "position",
-    "current": 18.41,
-    "previous": 12.45,
+    "current": 20.05,
+    "previous": 11.7,
     "delta_pct": null,
-    "message": "Position 12.5 -> 18.4 (worse by 6.0)",
+    "message": "Position 11.7 -> 20.0 (worse by 8.3)",
     "lost_clicks": 0
    },
    {
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/products/service-desk/",
-    "entity": "service knowledge management system",
+    "entity": "manageengine plus",
     "metric": "position",
-    "current": 16.58,
-    "previous": 5.65,
+    "current": 26.8,
+    "previous": 18.56,
     "delta_pct": null,
-    "message": "Position 5.7 -> 16.6 (worse by 10.9)",
+    "message": "Position 18.6 -> 26.8 (worse by 8.2)",
     "lost_clicks": 0
    },
    {
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/products/service-desk/",
-    "entity": "manageengine ticketing system",
+    "entity": "service desk",
     "metric": "position",
-    "current": 12.09,
-    "previous": 5.57,
+    "current": 26.94,
+    "previous": 20.58,
     "delta_pct": null,
-    "message": "Position 5.6 -> 12.1 (worse by 6.5)",
-    "lost_clicks": 0
-   },
-   {
-    "severity": "warning",
-    "scope": "query",
-    "site_url": "https://www.manageengine.com/products/service-desk/",
-    "entity": "devops pipeline",
-    "metric": "position",
-    "current": 16.29,
-    "previous": 12.62,
-    "delta_pct": null,
-    "message": "Position 12.6 -> 16.3 (worse by 3.7)",
+    "message": "Position 20.6 -> 26.9 (worse by 6.4)",
     "lost_clicks": 0
    },
    {
@@ -1780,18 +1828,6 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/products/service-desk/",
-    "entity": "manageengine plus",
-    "metric": "position",
-    "current": 26.8,
-    "previous": 18.56,
-    "delta_pct": null,
-    "message": "Position 18.6 -> 26.8 (worse by 8.2)",
-    "lost_clicks": 0
-   },
-   {
-    "severity": "warning",
-    "scope": "query",
-    "site_url": "https://www.manageengine.com/products/service-desk/",
     "entity": "cloud service desk",
     "metric": "position",
     "current": 18.89,
@@ -1804,12 +1840,36 @@
     "severity": "warning",
     "scope": "query",
     "site_url": "https://www.manageengine.com/products/service-desk/",
-    "entity": "service desk",
+    "entity": "devops pipeline",
     "metric": "position",
-    "current": 26.94,
-    "previous": 20.58,
+    "current": 16.29,
+    "previous": 12.62,
     "delta_pct": null,
-    "message": "Position 20.6 -> 26.9 (worse by 6.4)",
+    "message": "Position 12.6 -> 16.3 (worse by 3.7)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "manageengine ticketing system",
+    "metric": "position",
+    "current": 12.09,
+    "previous": 5.57,
+    "delta_pct": null,
+    "message": "Position 5.6 -> 12.1 (worse by 6.5)",
+    "lost_clicks": 0
+   },
+   {
+    "severity": "warning",
+    "scope": "query",
+    "site_url": "https://www.manageengine.com/products/service-desk/",
+    "entity": "service knowledge management system",
+    "metric": "position",
+    "current": 16.58,
+    "previous": 5.65,
+    "delta_pct": null,
+    "message": "Position 5.7 -> 16.6 (worse by 10.9)",
     "lost_clicks": 0
    }
   ]
