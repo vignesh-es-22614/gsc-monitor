@@ -600,7 +600,8 @@ const DIM_TABS = {
 
 let SQLMOD = null;
 const Q = {
-  ready:false, status:'', err:null, busy:false, res:null, ran:null,
+  ready:false, status:'', err:null, busy:false, res:null,
+  ran:null, ranCtx:null, pending:null,
   f:{ from:'', to:'', page:'', pageOp:'contains', query:'', queryOp:'contains',
       join:'any', countries:[], devices:[] },
   minClicks:'', limit:0, open:null, drill:null,
@@ -629,30 +630,48 @@ async function qBoot(){
 function qKey(){
   return JSON.stringify([S.prop, S.tab, Q.f, Q.minClicks, Q.limit]);
 }
+// Property + tab alone. Switching either must re-query; editing a filter waits
+// for Apply, so the two are tracked separately.
+function qCtx(){ return JSON.stringify([S.prop, S.tab]); }
 
 async function qRun(force){
-  if(Q.busy) return;
+  // A click made while a query is in flight used to be dropped, which left the
+  // previous tab's answer on screen for the new tab -- 217 "devices", because
+  // that was the country result. Remember it and run it when this one lands.
+  if(Q.busy){ Q.pending = force || Q.pending || true; return; }
   const key = qKey();
   if(!force && Q.ran === key) return;      // already showing this answer
+
+  // Snapshot everything the query depends on BEFORE the first await. S.tab can
+  // change while the query is in flight, and reading it afterwards labelled a
+  // queries result as the device tab's -- 25,188 "devices".
+  const ctx = qCtx(), tab = S.tab, slug = S.prop;
+  const dim = DIM_TABS[tab].dim;
+  const f = JSON.parse(JSON.stringify(Q.f));
+
   Q.busy = true; Q.err = null; Q.open = null; Q.drill = null;
   repaintTab();
   try{
     await qBoot();
-    const dim = DIM_TABS[S.tab].dim, f = Q.f;
     const [tot, g, series] = await Promise.all([
-      SQLMOD.totals(S.prop, f, [dim]),
-      SQLMOD.group(S.prop, f, [dim], Q.limit || null, Q.minClicks),
-      SQLMOD.daily(S.prop, f, [dim]),
+      SQLMOD.totals(slug, f, [dim]),
+      SQLMOD.group(slug, f, [dim], Q.limit || null, Q.minClicks),
+      SQLMOD.daily(slug, f, [dim]),
     ]);
     if(!Q.opts.countries.length){
-      Q.opts.countries = await SQLMOD.distinct(S.prop, f, 'country');
-      Q.opts.devices   = await SQLMOD.distinct(S.prop, f, 'device');
+      Q.opts.countries = await SQLMOD.distinct(slug, f, 'country');
+      Q.opts.devices   = await SQLMOD.distinct(slug, f, 'device');
     }
     Q.res = {tot, rows:g.rows, grain:g.grain, exact:g.exact, series,
-             bytes: SQLMOD.bytesFor(g.grain, S.prop, f.from, f.to)};
-    Q.ran = key;
-  }catch(e){ Q.err = e.message || String(e); Q.res = null; }
-  finally{ Q.busy = false; repaintTab(); }
+             bytes: SQLMOD.bytesFor(g.grain, slug, f.from, f.to)};
+    Q.ran = key; Q.ranCtx = ctx;
+  }catch(e){ Q.err = e.message || String(e); Q.res = null; Q.ran = null; Q.ranCtx = null; }
+  finally{
+    Q.busy = false;
+    const pending = Q.pending; Q.pending = null;
+    repaintTab();
+    if(pending) qRun(pending === true ? false : true);
+  }
 }
 
 /** Guard: a malformed result should show an error, not a stuck spinner. */
@@ -808,7 +827,9 @@ function renderDataTab(tb){
   // Which body gets rendered decides what elements exist afterwards. The old
   // result stays in Q.res while a new query runs, so "have a result" is not
   // the same question as "am I showing it".
-  const showResults = !Q.err && !Q.busy && resOk(r);
+  // A result only counts if it answers the tab being looked at. Without this
+  // the previous tab's rows stay on screen under the new tab's heading.
+  const showResults = !Q.err && !Q.busy && resOk(r) && Q.ranCtx === qCtx();
   let body;
   if(Q.err){
     body = `<div class="card"><div class="empty">
@@ -912,8 +933,9 @@ function renderDataTab(tb){
       {zeroBase:true, label:'Clicks per day'});
   }
 
-  // Auto-run on first arrival so the tab is never an empty prompt.
-  if(!resOk(Q.res) && !Q.busy && !Q.err) qRun(false);
+  // Auto-run when the property or tab changed, so a tab is never an empty
+  // prompt and never someone else's answer. Filter edits still wait for Apply.
+  if(Q.ranCtx !== qCtx() && !Q.busy && !Q.err) qRun(false);
 }
 
 function downloadRows(rows, name){
@@ -1124,13 +1146,23 @@ function alertsView(scopeSite){
     over the last ${a.compare_days} days.</div></div>`;
 
   const icon = {critical:'â–²', warning:'â—†', info:'â—'};
-  const groups = {pipeline:'Pipeline health', property:'Property level', page:'Pages', query:'Queries'};
+  // Ordered by what someone acts on first: a broken pipeline makes everything
+  // below it meaningless, then losses, then slipping position, then gains.
+  const groups = {
+    pipeline:        ['Pipeline health', 'Did the data even load'],
+    property:        ['Property level', 'Whole-property clicks and impressions'],
+    pages:           ['Pages — clicks &amp; impressions', 'Page-wise drops'],
+    queries:         ['Queries — clicks &amp; impressions', 'Query-wise drops'],
+    missing_queries: ['Missing queries', 'Ranked before, no impressions at all now'],
+    position:        ['Position tracker', 'Slipped down the results, at every level'],
+    new_queries:     ['New queries', 'Appeared from nothing — usually new content landing'],
+  };
   let out='';
-  for(const [scope,title] of Object.entries(groups)){
-    const items = list.filter(x=>x.scope===scope);
+  for(const [scope,[title,blurb]] of Object.entries(groups)){
+    const items = list.filter(x=>(x.group||x.scope)===scope);
     if(!items.length) continue;
     out += `<div class="card" style="margin-bottom:12px"><h2>${title}
-      <span class="note">${items.length}</span></h2>` +
+      <span class="note">${blurb} · ${items.length}</span></h2>` +
       items.map(x=>{
         let ent = String(x.entity);
         if(x.scope==='page') ent = ent.replace(x.site_url,'') || '/';

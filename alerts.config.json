@@ -38,6 +38,8 @@
     "page": {
       "clicks_drop_pct": 35,
       "clicks_drop_min_abs": 20,
+      "impressions_drop_pct": 40,
+      "impressions_drop_min_abs": 2000,
       "position_worsen_by": 3.0,
       "position_min_impressions": 500,
       "max_alerts": 15
@@ -45,9 +47,20 @@
     "query": {
       "clicks_drop_pct": 40,
       "clicks_drop_min_abs": 15,
+      "impressions_drop_pct": 45,
+      "impressions_drop_min_abs": 1000,
       "position_worsen_by": 3.0,
       "position_min_impressions": 300,
       "max_alerts": 15
+    },
+    "churn": {
+      "window_days": 28,
+      "_window_note": "Its own window, longer than the 7-day drop comparison. A query losing every impression is a slower signal: measured on this data, a 7-day window found zero queries that vanished with 10+ prior clicks, while 28 days found 14 missing and 36 new.",
+      "missing_min_prior_clicks": 10,
+      "missing_critical_clicks": 50,
+      "new_min_clicks": 10,
+      "max_alerts": 20,
+      "_note": "Queries that vanished entirely, and ones that appeared from nothing. A drop check cannot see either: a query with no rows this period has nothing to compare against, which is why a total loss is the easiest kind to miss."
     },
     "_note": "Minimum absolute movements exist because a percentage on a small base is noise: a page going 3 clicks -> 1 is a 67% drop and means nothing."
   },

@@ -1,4 +1,4 @@
-"""Anomaly and pipeline-health alerting for the Search Console monitor.
+﻿"""Anomaly and pipeline-health alerting for the Search Console monitor.
 
 Runs against BigQuery, writes ``docs/data/alerts.json``, merges the result into
 ``summary.json`` so the dashboard can render it, and emails a digest.
@@ -106,7 +106,7 @@ def property_alerts(bq, cfg, latest: dt.date, n: int) -> list[dict]:
         if d is not None and d <= -t["clicks_drop_pct"] and (c0 - c) >= t["clicks_drop_min_abs"]:
             out.append({
                 "severity": "critical" if d <= -40 else "warning",
-                "scope": "property", "site_url": site, "entity": site,
+                "scope": "property", "group": "property", "site_url": site, "entity": site,
                 "metric": "clicks", "current": c, "previous": c0, "delta_pct": d,
                 "message": f"Clicks {c0:,} -> {c:,} ({d:+.1f}%) over {n}d",
             })
@@ -115,7 +115,7 @@ def property_alerts(bq, cfg, latest: dt.date, n: int) -> list[dict]:
         if d is not None and d <= -t["impressions_drop_pct"] and (i0 - i) >= t["impressions_drop_min_abs"]:
             out.append({
                 "severity": "warning",
-                "scope": "property", "site_url": site, "entity": site,
+                "scope": "property", "group": "property", "site_url": site, "entity": site,
                 "metric": "impressions", "current": i, "previous": i0, "delta_pct": d,
                 "message": f"Impressions {i0:,} -> {i:,} ({d:+.1f}%) over {n}d",
             })
@@ -123,7 +123,8 @@ def property_alerts(bq, cfg, latest: dt.date, n: int) -> list[dict]:
         if p and p0 and (p - p0) >= t["position_worsen_by"]:
             out.append({
                 "severity": "warning",
-                "scope": "property", "site_url": site, "entity": site,
+                "scope": "property", "group": "position", "site_url": site,
+                "entity": site,
                 "metric": "position", "current": round(p, 2), "previous": round(p0, 2),
                 "delta_pct": None,
                 "message": f"Average position {p0:.1f} -> {p:.1f} (worse by {p - p0:.1f})",
@@ -169,7 +170,7 @@ def decay_alerts(bq, cfg, latest: dt.date) -> list[dict]:
 
         if c0 >= t["dormant_min_prior_clicks"] and c == 0:
             out.append({
-                "severity": "critical", "scope": "property", "site_url": site,
+                "severity": "critical", "scope": "property", "group": "property", "site_url": site,
                 "entity": site, "metric": "dormant",
                 "current": 0, "previous": c0, "delta_pct": -100.0,
                 "message": (
@@ -187,7 +188,7 @@ def decay_alerts(bq, cfg, latest: dt.date) -> list[dict]:
             and (c0 - c) >= t["clicks_drop_min_abs"]
         ):
             out.append({
-                "severity": "warning", "scope": "property", "site_url": site,
+                "severity": "warning", "scope": "property", "group": "property", "site_url": site,
                 "entity": site, "metric": "decay",
                 "current": c, "previous": c0, "delta_pct": d,
                 "message": (
@@ -204,7 +205,7 @@ def decay_alerts(bq, cfg, latest: dt.date) -> list[dict]:
             and (i0 - i) >= t["impressions_drop_min_abs"]
         ):
             out.append({
-                "severity": "warning", "scope": "property", "site_url": site,
+                "severity": "warning", "scope": "property", "group": "property", "site_url": site,
                 "entity": site, "metric": "decay",
                 "current": i, "previous": i0, "delta_pct": di,
                 "message": (
@@ -213,6 +214,11 @@ def decay_alerts(bq, cfg, latest: dt.date) -> list[dict]:
                 ),
             })
     return out
+
+
+# Digest section each grain's drops belong to. Spelled out rather than
+# pluralised, because "query" + "s" is not "queries".
+GRAIN_GROUP = {"page": "pages", "query": "queries"}
 
 
 def entity_alerts(bq, cfg, latest: dt.date, n: int, grain: str) -> list[dict]:
@@ -254,6 +260,8 @@ def entity_alerts(bq, cfg, latest: dt.date, n: int, grain: str) -> list[dict]:
         p, p0 = r["p"], r["p0"]
         hits = []
 
+        i = r["i"] or 0
+
         d = pct(c, c0)
         if d is not None and d <= -t["clicks_drop_pct"] and (c0 - c) >= t["clicks_drop_min_abs"]:
             hits.append((
@@ -261,8 +269,23 @@ def entity_alerts(bq, cfg, latest: dt.date, n: int, grain: str) -> list[dict]:
                 "clicks", c, c0, d,
                 f"Clicks {c0:,} -> {c:,} ({d:+.1f}%)"
                 + (" -- now zero" if c == 0 else ""),
+                GRAIN_GROUP[grain],
             ))
 
+        di = pct(i, i0)
+        if (
+            di is not None
+            and di <= -t["impressions_drop_pct"]
+            and (i0 - i) >= t["impressions_drop_min_abs"]
+        ):
+            hits.append((
+                "warning", "impressions", i, i0, di,
+                f"Impressions {i0:,} -> {i:,} ({di:+.1f}%)",
+                GRAIN_GROUP[grain],
+            ))
+
+        # Position drops are grouped separately -- a page can hold its clicks
+        # while sliding down the results, and that is the leading indicator.
         if (
             p and p0
             and (p - p0) >= t["position_worsen_by"]
@@ -271,11 +294,12 @@ def entity_alerts(bq, cfg, latest: dt.date, n: int, grain: str) -> list[dict]:
             hits.append((
                 "warning", "position", round(p, 2), round(p0, 2), None,
                 f"Position {p0:.1f} -> {p:.1f} (worse by {p - p0:.1f})",
+                "position",
             ))
 
-        for sev, metric, cur, prev, delta, msg in hits:
+        for sev, metric, cur, prev, delta, msg, group in hits:
             by_site.setdefault(site, []).append({
-                "severity": sev, "scope": grain, "site_url": site,
+                "severity": sev, "scope": grain, "group": group, "site_url": site,
                 "entity": r["k"], "metric": metric, "current": cur,
                 "previous": prev, "delta_pct": delta, "message": msg,
                 "lost_clicks": c0 - c if metric == "clicks" else 0,
@@ -287,6 +311,78 @@ def entity_alerts(bq, cfg, latest: dt.date, n: int, grain: str) -> list[dict]:
     for site, items in by_site.items():
         items.sort(key=lambda a: (SEV_ORDER[a["severity"]], -a["lost_clicks"]))
         out.extend(items[: t["max_alerts"]])
+    return out
+
+
+def query_churn_alerts(bq, cfg, latest: dt.date, n: int) -> list[dict]:
+    """Queries that stopped ranking, and queries that started.
+
+    A drop check can only see a query that is still there. A query that earned
+    clicks last week and returns *no rows at all* this week never appears in a
+    comparison, because there is nothing to compare against -- it is the most
+    complete kind of loss and the easiest to miss.
+
+    The mirror case is worth surfacing for the opposite reason: a query that
+    appeared from nothing is usually new content landing, or a competitor's
+    term starting to match, and either is something to know about.
+
+    Query grain, so anonymised queries are absent from both sides. That is
+    fine here: the check is about presence, and a query too rare to be
+    reported was never visible to begin with.
+    """
+    t = cfg["thresholds"]["churn"]
+    n = t.get("window_days", n)
+    cur_start = latest - dt.timedelta(days=n - 1)
+    prev_start = cur_start - dt.timedelta(days=n)
+
+    sql = f"""
+    SELECT site_url, query,
+           SUM(IF(date >= '{cur_start}', clicks, 0)) c,
+           SUM(IF(date <  '{cur_start}', clicks, 0)) c0,
+           SUM(IF(date >= '{cur_start}', impressions, 0)) i,
+           SUM(IF(date <  '{cur_start}', impressions, 0)) i0
+    FROM {QUERY_TABLE}
+    WHERE site_url IS NOT NULL AND query IS NOT NULL
+      AND date BETWEEN '{prev_start}' AND '{latest}'
+    GROUP BY site_url, query
+    HAVING (i = 0 AND c0 >= {t["missing_min_prior_clicks"]})
+        OR (i0 = 0 AND c >= {t["new_min_clicks"]})
+    """
+    missing: dict[str, list] = {}
+    fresh: dict[str, list] = {}
+    for r in bq.query(sql).result():
+        site = r["site_url"]
+        if (r["i"] or 0) == 0:
+            missing.setdefault(site, []).append({
+                "severity": "critical" if (r["c0"] or 0) >= t["missing_critical_clicks"]
+                            else "warning",
+                "scope": "query", "group": "missing_queries", "site_url": site,
+                "entity": r["query"], "metric": "missing",
+                "current": 0, "previous": r["c0"] or 0, "delta_pct": -100.0,
+                "lost_clicks": r["c0"] or 0,
+                "message": (
+                    f"Gone: {r['c0']:,} clicks and {r['i0']:,} impressions in the "
+                    f"previous {n} days, no impressions at all now."
+                ),
+            })
+        else:
+            fresh.setdefault(site, []).append({
+                "severity": "info",
+                "scope": "query", "group": "new_queries", "site_url": site,
+                "entity": r["query"], "metric": "new",
+                "current": r["c"] or 0, "previous": 0, "delta_pct": None,
+                "lost_clicks": 0,
+                "message": (
+                    f"New: {r['c']:,} clicks and {r['i']:,} impressions, with no "
+                    f"impressions at all in the previous {n} days."
+                ),
+            })
+
+    out = []
+    for bucket in (missing, fresh):
+        for site, items in bucket.items():
+            items.sort(key=lambda a: -max(a["lost_clicks"], a["current"]))
+            out.extend(items[: t["max_alerts"]])
     return out
 
 
@@ -320,7 +416,7 @@ def pipeline_alerts(bq, cfg, latest: dt.date) -> list[dict]:
         behind = (today - r["latest"]).days
         if behind > p["max_days_behind"]:
             out.append({
-                "severity": "critical", "scope": "pipeline", "site_url": site,
+                "severity": "critical", "scope": "pipeline", "group": "pipeline", "site_url": site,
                 "entity": site, "metric": "freshness",
                 "current": behind, "previous": p["max_days_behind"],
                 "delta_pct": None,
@@ -344,7 +440,7 @@ def pipeline_alerts(bq, cfg, latest: dt.date) -> list[dict]:
             and (r["median_rows"] or 0) >= p["gap_min_median_rows"]
         ):
             out.append({
-                "severity": "warning", "scope": "pipeline", "site_url": site,
+                "severity": "warning", "scope": "pipeline", "group": "pipeline", "site_url": site,
                 "entity": site, "metric": "gaps",
                 "current": missing, "previous": 0, "delta_pct": None,
                 "message": (
@@ -376,7 +472,7 @@ def pipeline_alerts(bq, cfg, latest: dt.date) -> list[dict]:
         ratio = last / med * 100
         if ratio < p["min_rows_vs_median_pct"]:
             out.append({
-                "severity": "warning", "scope": "pipeline",
+                "severity": "warning", "scope": "pipeline", "group": "pipeline",
                 "site_url": r["site_url"], "entity": r["site_url"],
                 "metric": "volume", "current": last, "previous": med,
                 "delta_pct": round(ratio - 100, 1),
@@ -395,14 +491,20 @@ def render_email(alerts: list[dict], latest: dt.date, n: int, url: str) -> str:
     colour = {"critical": "#b42318", "warning": "#b54708", "info": "#175cd3"}
     groups: dict[str, list[dict]] = {}
     for a in alerts:
-        groups.setdefault(a["scope"], []).append(a)
+        groups.setdefault(a.get("group", a["scope"]), []).append(a)
 
-    order = ["pipeline", "property", "page", "query"]
+    # Same order as the dashboard: a broken pipeline first, because it makes
+    # everything under it meaningless; gains last.
+    order = ["pipeline", "property", "pages", "queries",
+             "missing_queries", "position", "new_queries"]
     title = {
         "pipeline": "Pipeline health",
         "property": "Property level",
-        "page": "Pages",
-        "query": "Queries",
+        "pages": "Pages &mdash; clicks &amp; impressions",
+        "queries": "Queries &mdash; clicks &amp; impressions",
+        "missing_queries": "Missing queries &mdash; no impressions at all now",
+        "position": "Position tracker &mdash; slipped down the results",
+        "new_queries": "New queries &mdash; appeared from nothing",
     }
 
     rows = []
@@ -418,7 +520,7 @@ def render_email(alerts: list[dict], latest: dt.date, n: int, url: str) -> str:
         )
         for a in items:
             ent = a["entity"]
-            if scope in ("page", "query"):
+            if a["scope"] in ("page", "query"):
                 ent = short(str(ent), a["site_url"])
             ent = (ent[:90] + "…") if len(str(ent)) > 90 else ent
             prop = a["site_url"].replace("https://www.manageengine.com/", "").replace(
@@ -546,6 +648,9 @@ def main() -> None:
     try:
         alerts += entity_alerts(bq, cfg, latest, n, "query")
         print(f"  query:    {len(alerts) - n0}")
+        n0 = len(alerts)
+        alerts += query_churn_alerts(bq, cfg, latest, n)
+        print(f"  churn:    {len(alerts) - n0}")
     except Exception as exc:  # noqa: BLE001
         print(f"  query:    skipped ({exc})")
 
