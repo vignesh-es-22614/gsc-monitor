@@ -588,7 +588,6 @@ function propView(){
       <button data-tab="themes" aria-selected="${S.tab==='themes'}">Themes</button>
       <button data-tab="country" aria-selected="${S.tab==='country'}">Countries</button>
       <button data-tab="device" aria-selected="${S.tab==='device'}">Devices</button>
-      <button data-tab="trends" aria-selected="${S.tab==='trends'}">Trends</button>
       <button data-tab="reports" aria-selected="${S.tab==='reports'}">Reports</button>
       <button data-tab="alerts" aria-selected="${S.tab==='alerts'}">Alerts</button>
     </div>
@@ -637,7 +636,7 @@ const Q = {
   opts:{countries:[], devices:[]}, countrySearch:'', showAllCountries:false,
   themeDim:'theme',
   // Trend view
-  period:'weekly', metrics:['clicks','impressions'], trend:null, trendDim:'page',
+  period:'off', metrics:['clicks','impressions'], trend:null,
 };
 
 function qDefaults(){
@@ -685,6 +684,13 @@ async function qRun(force){
   repaintTab();
   try{
     await qBoot();
+    if(Q.period !== 'off'){
+      const t = await SQLMOD.trend(slug, f, dim, Q.period, Q.limit || 200);
+      Q.trend = {...t, dim, period: Q.period};
+      Q.res = null; Q.ran = key; Q.ranCtx = ctx;
+      return;
+    }
+    Q.trend = null;
     const [tot, g, series] = await Promise.all([
       SQLMOD.totals(slug, f, [dim]),
       SQLMOD.group(slug, f, [dim], Q.limit || null, Q.minClicks),
@@ -714,7 +720,6 @@ function resOk(r){
 function repaintTab(){
   const tb = $('#tabbody');
   if(tb && DIM_TABS[S.tab]) renderDataTab(tb);
-  else if(tb && S.tab==='trends')  renderTrends(tb);
   else if(tb && S.tab==='reports') renderReports(tb);
 }
 
@@ -750,8 +755,19 @@ function filterBar(){
         <label>Row limit<select id="q_limit">
           ${[0,1000,10000,100000].map(n=>`<option value="${n}" ${Q.limit===n?'selected':''}>${n?fmt(n):'no limit'}</option>`).join('')}
         </select></label>
+        <label>Trend<select id="q_period">
+          <option value="off" ${Q.period==='off'?'selected':''}>off — totals</option>
+          ${Object.entries(PERIODS).map(([k,v])=>
+            `<option value="${k}" ${Q.period===k?'selected':''}>${v}</option>`).join('')}
+        </select></label>
         <label>&nbsp;<button class="iconbtn primary" id="q_run">${Q.busy?'Running…':'Apply'}</button></label>
       </div>
+
+      ${Q.period!=='off' ? `<div class="facet"><b>Metrics</b>
+        ${Object.entries(METRIC_LABELS).map(([k,v])=>`<button class="chip${Q.metrics.includes(k)?' on':''}"
+          data-metric="${k}">${v}</button>`).join('')}
+        <span style="color:var(--muted);font-size:11.5px;margin-left:6px">
+          one column per period, grouped by metric</span></div>` : ''}
 
       <div class="exgrid" style="margin-top:9px">
         <label>Page<span class="pair">
@@ -831,6 +847,12 @@ function wireFilterBar(tb){
   const mc = tb.querySelector('#q_min');
   if(mc){ mc.oninput = ()=>{ Q.minClicks = mc.value; };
           mc.onkeydown = e=>{ if(e.key==='Enter') qRun(true); }; }
+  on('q_period', e=>{ Q.period = e.target.value; Q.trend = null; qRun(true); });
+  tb.querySelectorAll('.chip[data-metric]').forEach(c=>c.onclick=()=>{
+    const m=c.dataset.metric, i=Q.metrics.indexOf(m);
+    if(i<0) Q.metrics.push(m); else if(Q.metrics.length>1) Q.metrics.splice(i,1);
+    repaintTab();
+  });
   on('q_run', ()=>qRun(true), 'onclick');
   on('q_reset', ()=>{ qReset(); qRun(true); }, 'onclick');
   on('q_morec', ()=>{ Q.showAllCountries = true; repaintTab(); }, 'onclick');
@@ -880,9 +902,14 @@ function renderDataTab(tb){
   // the same question as "am I showing it".
   // A result only counts if it answers the tab being looked at. Without this
   // the previous tab's rows stay on screen under the new tab's heading.
-  const showResults = !Q.err && !Q.busy && resOk(r) && Q.ranCtx === qCtx();
+  const showTrend = !Q.err && !Q.busy && Q.period !== 'off'
+                    && Q.trend && Q.ranCtx === qCtx();
+  const showResults = !Q.err && !Q.busy && Q.period === 'off'
+                      && resOk(r) && Q.ranCtx === qCtx();
   let body;
-  if(Q.err){
+  if(showTrend){
+    body = trendTable(Q.trend);
+  }else if(Q.err){
     body = `<div class="card"><div class="empty">
       <b style="color:var(--critical)">Query failed.</b><br>${esc(Q.err)}<br>
       <span style="font-size:12px">If this says manifest.json, the Parquet export
@@ -989,6 +1016,8 @@ function renderDataTab(tb){
       {zeroBase:true, label:'Clicks per day'});
   }
 
+  const dl2 = tb.querySelector('#t_dl'); if(dl2) dl2.onclick = trendCSV;
+
   // Auto-run when the property or tab changed, so a tab is never an empty
   // prompt and never someone else's answer. Filter edits still wait for Apply.
   if(Q.ranCtx !== qCtx() && !Q.busy && !Q.err) qRun(false);
@@ -1045,21 +1074,6 @@ const metricCell = (row, m) =>
 : m==='revenue'  ? money(row.revenue)
 : fmt(row[m]);
 
-async function trendRun(){
-  if(Q.busy) return;
-  const ctx = qCtx(), slug = S.prop, dim = Q.trendDim;
-  const f = JSON.parse(JSON.stringify(Q.f));
-  const period = Q.period;
-  Q.busy = true; Q.err = null; repaintTab();
-  try{
-    await qBoot();
-    const t = await SQLMOD.trend(slug, f, dim, period, Q.limit || 200);
-    Q.trend = {...t, dim, period};
-    Q.ranCtx = ctx;
-  }catch(e){ Q.err = e.message || String(e); Q.trend = null; }
-  finally{ Q.busy = false; repaintTab(); }
-}
-
 function trendCSV(){
   const t = Q.trend; if(!t) return;
   const byKey = new Map();
@@ -1086,97 +1100,43 @@ function trendCSV(){
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },0);
 }
 
-function renderTrends(tb){
-  if(!tb) return;
-  qDefaults();
-  const t = Q.trend;
-  const DIMS = ['page','query','country','device','theme','sub_theme','page_type'];
-
-  const controls = `<div class="card" style="margin-bottom:14px">
-    <h2>Trend <span class="note">every period side by side, for whichever
-      metrics you pick</span></h2>
-    <div class="body"><div class="exgrid">
-      <label>Break down by<select id="t_dim">
-        ${DIMS.map(d=>`<option value="${d}" ${Q.trendDim===d?'selected':''}>${d.replace('_',' ')}</option>`).join('')}
-      </select></label>
-      <label>Period<select id="t_period">
-        ${Object.entries(PERIODS).map(([k,v])=>`<option value="${k}" ${Q.period===k?'selected':''}>${v}</option>`).join('')}
-      </select></label>
-      <label>Rows<select id="t_limit">
-        ${[50,200,1000].map(n=>`<option value="${n}" ${Q.limit===n?'selected':''}>${n}</option>`).join('')}
-      </select></label>
-      <label>&nbsp;<button class="iconbtn primary" id="t_run">${Q.busy?'Running…':'Apply'}</button></label>
-    </div>
-    <div class="facet"><b>Metrics</b>
-      ${Object.entries(METRIC_LABELS).map(([k,v])=>`<button class="chip${Q.metrics.includes(k)?' on':''}"
-        data-metric="${k}">${v}</button>`).join('')}
-      <span style="color:var(--muted);font-size:11.5px;margin-left:6px">
-        leads, conversions and revenue need the page grain — clear the query,
-        country and device filters to see them</span>
-    </div></div>
-  </div>`;
-
-  let body;
-  if(Q.err){
-    body = `<div class="card"><div class="empty">
-      <b style="color:var(--critical)">Query failed.</b><br>${esc(Q.err)}</div></div>`;
-  }else if(Q.busy){
-    body = `<div class="card"><div class="spinner" id="q_status">${esc(Q.status||'Building trend…')}</div></div>`;
-  }else if(!t || !t.rows.length){
-    body = `<div class="card"><div class="empty">
-      Pick a breakdown, a period and one or more metrics, then press
-      <b>Apply</b>.</div></div>`;
-  }else{
-    const byKey = new Map();
-    for(const r of t.rows){
-      if(!byKey.has(r.k)) byKey.set(r.k, {});
-      byKey.get(r.k)[r.period] = r;
-    }
-    const metrics = Q.metrics.filter(m =>
-      t.exact || !['leads','conversions','revenue'].includes(m));
-    const label = k => t.dim==='page'
-      ? (String(k).replace(S.propData.site_url,'') || '/') : k;
-
-    body = `<div class="card">
-      <h2>${esc(t.dim.replace('_',' '))} by ${esc(PERIODS[t.period].toLowerCase())}
-        <span class="note">${fmt(byKey.size)} rows × ${t.periods.length} periods${
-          t.exact?'':' · query grain, understated'}</span>
-        <span style="margin-left:auto"><button class="iconbtn" id="t_dl">↓ CSV</button></span></h2>
-      <div class="tablewrap"><table><thead>
-        <tr><th rowspan="2" style="vertical-align:bottom">${esc(t.dim.replace('_',' '))}</th>
-          ${metrics.map(m=>`<th class="num mgroup" colspan="${t.periods.length}">${METRIC_LABELS[m]}</th>`).join('')}</tr>
-        <tr>${metrics.map(m=>t.periods.map((p,i)=>
-          `<th class="num${i===0?' mgroup':''}">${esc(periodLabel(p, t.period))}</th>`).join('')).join('')}</tr>
-      </thead><tbody>` +
-      [...byKey.entries()].map(([k, per])=>`<tr>
-        <td class="ent" title="${esc(k)}">${esc(label(k))}</td>
-        ${metrics.map(m=>t.periods.map((p,i)=>{
-          const row = per[p];
-          return `<td class="num${i===0?' mgroup':''}">${row? metricCell(row, m) : '–'}</td>`;
-        }).join('')).join('')}
-      </tr>`).join('') +
-      `</tbody></table></div>
-      <p class="caveat">Ranked by total clicks across the whole range, so the
-      same rows appear in every period rather than a different top-N per
-      column.</p><div style="height:12px"></div></div>`;
+function trendTable(t){
+  if(!t.rows.length) return `<div class="card"><div class="empty">
+    No rows in this range.</div></div>`;
+  const byKey = new Map();
+  for(const r of t.rows){
+    if(!byKey.has(r.k)) byKey.set(r.k, {});
+    byKey.get(r.k)[r.period] = r;
   }
+  // Lead metrics exist only on the page grain; drop them rather than show a
+  // column of dashes when a query/country/device filter forced the other file.
+  const metrics = Q.metrics.filter(m =>
+    t.exact || !['leads','conversions','revenue'].includes(m));
+  const label = k => t.dim==='page'
+    ? (String(k).replace(S.propData.site_url,'') || '/') : k;
 
-  tb.innerHTML = controls + filterBar() + body;
-  wireFilterBar(tb);
-
-  const on = (id,fn,ev='onchange')=>{ const el=tb.querySelector('#'+id); if(el) el[ev]=fn; };
-  on('t_dim',    e=>{ Q.trendDim = e.target.value; });
-  on('t_period', e=>{ Q.period   = e.target.value; });
-  on('t_limit',  e=>{ Q.limit    = +e.target.value; });
-  on('t_run',    ()=>trendRun(), 'onclick');
-  on('t_dl',     trendCSV, 'onclick');
-  tb.querySelectorAll('.chip[data-metric]').forEach(c=>c.onclick=()=>{
-    const m=c.dataset.metric, i=Q.metrics.indexOf(m);
-    if(i<0) Q.metrics.push(m); else if(Q.metrics.length>1) Q.metrics.splice(i,1);
-    repaintTab();
-  });
-
-  if(!Q.trend && !Q.busy && !Q.err) trendRun();
+  return `<div class="card">
+    <h2>${esc(t.dim.replace('_',' '))} by ${esc(PERIODS[t.period].toLowerCase())}
+      <span class="note">${fmt(byKey.size)} rows \u00d7 ${t.periods.length} periods${
+        t.exact?'':' \u00b7 query grain, understated'}</span>
+      <span style="margin-left:auto"><button class="iconbtn" id="t_dl">\u2193 CSV</button></span></h2>
+    <div class="tablewrap"><table><thead>
+      <tr><th rowspan="2" style="vertical-align:bottom">${esc(t.dim.replace('_',' '))}</th>
+        ${metrics.map(m=>`<th class="num mgroup" colspan="${t.periods.length}">${METRIC_LABELS[m]}</th>`).join('')}</tr>
+      <tr>${metrics.map(m=>t.periods.map((p,i)=>
+        `<th class="num${i===0?' mgroup':''}">${esc(periodLabel(p, t.period))}</th>`).join('')).join('')}</tr>
+    </thead><tbody>` +
+    [...byKey.entries()].map(([k, per])=>`<tr>
+      <td class="ent" title="${esc(k)}">${esc(label(k))}</td>
+      ${metrics.map(m=>t.periods.map((p,i)=>{
+        const row = per[p];
+        return `<td class="num${i===0?' mgroup':''}">${row? metricCell(row, m) : '\u2013'}</td>`;
+      }).join('')).join('')}
+    </tr>`).join('') +
+    `</tbody></table></div>
+    <p class="caveat">Ranked by total clicks across the whole range, so the same
+    rows appear in every period rather than a different top-N per column.</p>
+    <div style="height:12px"></div></div>`;
 }
 
 // ============================================================= reports ===
@@ -1453,7 +1413,6 @@ function render(){
   // --- tab body ----------------------------------------------------------
   const tb=$('#tabbody');
   if(DIM_TABS[S.tab])        renderDataTab(tb);
-  else if(S.tab==='trends')  renderTrends(tb);
   else if(S.tab==='reports') renderReports(tb);
   else                       tb.innerHTML = alertsView(S.propData.site_url);
 

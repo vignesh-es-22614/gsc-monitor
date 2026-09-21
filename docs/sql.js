@@ -298,6 +298,12 @@ export async function trend(slug, f, dim, period, limit = 200) {
 
   // Rank entities on the whole range first, so the table shows the same top N
   // in every period instead of a different set per column.
+  //
+  // GROUP BY names the qualified column rather than the alias: the ranked CTE
+  // also exposes a column called k, so GROUP BY k binds to the join side and
+  // leaves the selected s.<dim> ungrouped. (Kept as a JS comment -- a SQL
+  // comment here would sit inside the template literal, and a backtick in it
+  // would end the string.)
   const rows = await run(`
     WITH ranked AS (
       SELECT ${dim} AS k, SUM(clicks) AS total
@@ -308,7 +314,7 @@ export async function trend(slug, f, dim, period, limit = 200) {
     FROM ${src} s
     JOIN ranked r ON r.k = s.${dim}
     WHERE ${where(f, grain)} AND s.${dim} IS NOT NULL
-    GROUP BY k, period
+    GROUP BY s.${dim}, ${b}
     ORDER BY period`);
 
   const periods = [...new Set(rows.map(r => r.period))].sort();
