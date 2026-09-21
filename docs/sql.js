@@ -98,12 +98,31 @@ function where(f, grain) {
   return c.join(' AND ');
 }
 
-/** Metric expressions, shared by every query so totals stay consistent. */
-const METRICS = `
+/**
+ * Metric expressions, shared by every query so totals stay consistent.
+ *
+ * Leads, conversions and revenue exist only on the page grain, and in two
+ * attributions: `first` is the page that introduced the lead, `last` the page
+ * it converted from. They describe different pages and are never summed
+ * together, so the caller picks one and gets that one.
+ */
+function metrics(grain, attribution = 'first') {
+  const base = `
   SUM(clicks)::BIGINT AS clicks,
   SUM(impressions)::BIGINT AS impressions,
   SUM(clicks) / NULLIF(SUM(impressions), 0) AS ctr,
   SUM(position * impressions) / NULLIF(SUM(impressions), 0) AS position`;
+  if (grain !== 'page') {
+    // Keep the shape identical so the table code needs no special case.
+    return base + `,
+  NULL::BIGINT AS leads, NULL::BIGINT AS conversions, NULL::DOUBLE AS revenue`;
+  }
+  const s = attribution === 'last' ? 'last' : 'first';
+  return base + `,
+  SUM(leads_${s})::BIGINT AS leads,
+  SUM(conv_${s})::BIGINT AS conversions,
+  SUM(rev_${s})::DOUBLE AS revenue`;
+}
 
 function source(grain, slug, f) {
   const files = filesFor(grain, slug, f.from, f.to);
@@ -132,6 +151,26 @@ export function grainFor(dims, f) {
   return needsQueryGrain ? 'query' : 'page';
 }
 
+/** Dimensions that exist only on the page grain. */
+export const PAGE_ONLY_DIMS = ['theme', 'sub_theme', 'page_type'];
+
+/** Metrics that exist only on the page grain (the CRM join lives there). */
+export const LEAD_METRICS = ['leads', 'conversions', 'revenue'];
+
+/**
+ * A question mixing a page-only dimension with a query-only one cannot be
+ * answered from either file. Say so rather than returning a wrong number.
+ */
+export function unanswerable(dims, f) {
+  const wantsPageOnly = dims.some(d => PAGE_ONLY_DIMS.includes(d));
+  return wantsPageOnly && grainFor(dims, f) === 'query'
+    ? 'Theme, sub-theme and page type are page-level facts, and country, '
+      + 'device and query filters can only be answered from the query-grain '
+      + 'file, which has no theme column. Clear the query, country and device '
+      + 'filters to group by theme.'
+    : null;
+}
+
 async function run(sql) {
   const res = await _conn.query(sql);
   return res.toArray().map(r => {
@@ -147,7 +186,8 @@ export async function totals(slug, f, dims = []) {
   const grain = grainFor(dims, f);
   const src = source(grain, slug, f);
   if (!src) return null;
-  const [row] = await run(`SELECT ${METRICS} FROM ${src} WHERE ${where(f, grain)}`);
+  const [row] = await run(
+    `SELECT ${metrics(grain, f.attribution)} FROM ${src} WHERE ${where(f, grain)}`);
   if (row) { row.grain = grain; row.exact = grain === 'page'; }
   return row;
 }
@@ -165,7 +205,7 @@ export async function group(slug, f, dims, limit = null, minClicks = 0) {
   if (!src) return { rows: [], grain, exact: grain === 'page' };
   const sel = list.join(', ');
   const rows = await run(`
-    SELECT ${sel}, ${METRICS}
+    SELECT ${sel}, ${metrics(grain, f.attribution)}
     FROM ${src}
     WHERE ${where(f, grain)} AND ${list.map(d => `${d} IS NOT NULL`).join(' AND ')}
     GROUP BY ${sel}
@@ -183,7 +223,7 @@ export async function daily(slug, f, dims = []) {
   const src = source(grain, slug, f);
   if (!src) return [];
   return run(`
-    SELECT date::VARCHAR AS d, ${METRICS}
+    SELECT date::VARCHAR AS d, ${metrics(grain, f.attribution)}
     FROM ${src} WHERE ${where(f, grain)}
     GROUP BY d ORDER BY d`);
 }
@@ -212,7 +252,7 @@ export async function drill(slug, f, dim, value, into, limit = 10) {
   const src = source('query', slug, f);
   if (!src) return [];
   return run(`
-    SELECT ${into} AS k, ${METRICS}
+    SELECT ${into} AS k, ${metrics('query', f.attribution)}
     FROM ${src}
     WHERE ${where(f, 'query')} AND ${dim} = ${lit(value)} AND ${into} IS NOT NULL
     GROUP BY k
@@ -222,3 +262,55 @@ export async function drill(slug, f, dim, value, into, limit = 10) {
 
 /** Escape hatch: run arbitrary SQL against the current property's files. */
 export async function raw(sql) { return run(sql); }
+
+/**
+ * Period bucketing for the trend view.
+ *
+ * DuckDB's date_trunc handles week/month/quarter/year; half-year has no
+ * built-in, so it is expressed as the month floored to a 6-month boundary.
+ * Weeks start Monday, which is what date_trunc('week') already does.
+ */
+function bucketExpr(period) {
+  switch (period) {
+    case 'weekly':      return `date_trunc('week', date)`;
+    case 'monthly':     return `date_trunc('month', date)`;
+    case 'quarterly':   return `date_trunc('quarter', date)`;
+    case 'halfyearly':  return `make_date(year(date), CASE WHEN month(date) <= 6 THEN 1 ELSE 7 END, 1)`;
+    case 'yearly':      return `date_trunc('year', date)`;
+    default:            return `date_trunc('week', date)`;
+  }
+}
+
+/**
+ * One row per entity, one column per period -- the shape the table renders as
+ * `page | clicks (w1, w2, ...) | impressions (w1, w2, ...)`.
+ *
+ * Returned long rather than pivoted: DuckDB would need the period list baked
+ * into the SQL to pivot, and the caller has to group by entity anyway to lay
+ * the columns out. Long keeps one query working for any number of periods.
+ */
+export async function trend(slug, f, dim, period, limit = 200) {
+  const dims = [dim];
+  const grain = grainFor(dims, f);
+  const src = source(grain, slug, f);
+  if (!src) return { rows: [], periods: [], grain, exact: grain === 'page' };
+  const b = bucketExpr(period);
+
+  // Rank entities on the whole range first, so the table shows the same top N
+  // in every period instead of a different set per column.
+  const rows = await run(`
+    WITH ranked AS (
+      SELECT ${dim} AS k, SUM(clicks) AS total
+      FROM ${src} WHERE ${where(f, grain)} AND ${dim} IS NOT NULL
+      GROUP BY k ORDER BY total DESC LIMIT ${Number(limit) || 200}
+    )
+    SELECT s.${dim} AS k, ${b}::VARCHAR AS period, ${metrics(grain, f.attribution)}
+    FROM ${src} s
+    JOIN ranked r ON r.k = s.${dim}
+    WHERE ${where(f, grain)} AND s.${dim} IS NOT NULL
+    GROUP BY k, period
+    ORDER BY period`);
+
+  const periods = [...new Set(rows.map(r => r.period))].sort();
+  return { rows, periods, grain, exact: grain === 'page' };
+}

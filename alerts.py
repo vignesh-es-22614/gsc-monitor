@@ -55,6 +55,131 @@ QUERY_TABLE = f"`{PROJECT}.{DATASET}.v_query_daily`"
 
 SEV_ORDER = {"critical": 0, "warning": 1, "info": 2}
 
+# What each alert usually means and what to do about it.
+#
+# Deliberately a lookup rather than free text per alert: the same shape of
+# movement has the same short list of likely causes every time, and writing it
+# once keeps the digest from turning into 180 lines of improvised prose. Each
+# entry is (likely causes, what to check first).
+#
+# These are diagnoses to start from, not conclusions. The check column says
+# what would confirm or kill each one -- the point is to make the next step
+# obvious, not to pretend the alert knows why.
+DIAGNOSIS = {
+    ("pages", "clicks"): (
+        "Position slipped (check the position tracker for the same page), a "
+        "SERP feature took the click (AI overview, featured snippet, People "
+        "Also Ask), the title or description changed, or seasonality.",
+        "Compare impressions: if impressions held and clicks fell, it is a CTR "
+        "problem -- ranking is intact and the listing is losing the click. If "
+        "impressions fell too, it is a ranking or demand problem.",
+    ),
+    ("pages", "impressions"): (
+        "Lost rankings for the queries that fed the page, a Google core update, "
+        "deindexing, a noindex or canonical added by mistake, or the page was "
+        "moved or redirected.",
+        "Search Console URL Inspection on the page, then the Queries tab "
+        "filtered to this page: if the queries themselves vanished it is "
+        "indexing, if they merely dropped it is ranking.",
+    ),
+    ("queries", "clicks"): (
+        "A competitor outranked you, the SERP layout changed for this query, "
+        "or intent shifted so the page no longer matches.",
+        "Search the query and look at what now occupies the top of the page. "
+        "If your URL is still there, the click is going somewhere else on the "
+        "SERP; if it is not, you lost the ranking.",
+    ),
+    ("queries", "impressions"): (
+        "The query stopped matching your page, or total search demand for it "
+        "fell. Demand moves are seasonal and affect competitors equally.",
+        "Check whether neighbouring queries moved the same way. A single query "
+        "falling alone is a ranking problem; a whole cluster falling together "
+        "is usually demand.",
+    ),
+    ("position", "position"): (
+        "A Google update, a competitor improving, content going stale, lost "
+        "internal links, or the page cannibalising another of your own pages "
+        "that targets the same intent.",
+        "Whether one page slipped or the whole property did. Property-wide is "
+        "an algorithm update; a single page is that page's own problem. Then "
+        "check whether another of your pages now ranks for the same query.",
+    ),
+    ("missing_queries", "missing"): (
+        "The page lost the ranking entirely, was deindexed, or the query no "
+        "longer matches it at all. Zero impressions is stronger than a drop -- "
+        "the page is not being shown for this query at all.",
+        "Search the query. If a different page of yours appears, it is "
+        "cannibalisation and the wrong page is now eligible. If none appears, "
+        "check indexing on the page that used to rank.",
+    ),
+    ("new_queries", "new"): (
+        "New or updated content became eligible, a page started matching a new "
+        "intent, or a competitor stopped ranking for it.",
+        "Whether the page Google chose is the one you would have chosen. A "
+        "query landing on the wrong page is an internal-linking or content fix "
+        "and usually converts worse.",
+    ),
+    ("property", "clicks"): (
+        "A site-wide change: a Google update, a migration, a robots.txt or "
+        "sitemap change, a template edit affecting every page, or a CDN or "
+        "availability incident during the period.",
+        "Whether the drop is spread across pages or concentrated in a few. "
+        "Spread evenly means site-wide; concentrated means a section.",
+    ),
+    ("property", "impressions"): (
+        "Wide loss of indexed pages or ranking positions -- a core update or a "
+        "crawling and indexing problem.",
+        "Search Console Pages report for a rise in excluded or non-indexed "
+        "URLs, and the Coverage trend for the same dates.",
+    ),
+    ("property", "dormant"): (
+        "The property has stopped earning search traffic entirely. Normally a "
+        "migration, a deindexing, or the site being retired without anyone "
+        "telling the analytics.",
+        "Whether the site still resolves and still returns indexable HTML, "
+        "then whether the traffic reappeared on a different property.",
+    ),
+    ("property", "decay"): (
+        "A slow bleed rather than a cliff: content ageing, competitors "
+        "steadily improving, or accumulated small losses across many pages.",
+        "The Pages tab over the same long window rather than the last week -- "
+        "a decline this gradual never breaches a weekly threshold.",
+    ),
+    ("pipeline", "freshness"): (
+        "The daily load did not run or failed: expired credentials, a changed "
+        "Search Console permission, or the workflow erroring.",
+        "The last Actions run, then the token's scopes. Nothing on this "
+        "dashboard is trustworthy while this alert stands.",
+    ),
+    ("pipeline", "gaps"): (
+        "Days missing inside the loaded range -- an interrupted backfill or an "
+        "API error swallowed mid-run.",
+        "Re-run the export for the affected range; it is idempotent and will "
+        "overwrite rather than duplicate.",
+    ),
+    ("pipeline", "volume"): (
+        "The job ran and wrote far less than usual, which a freshness check "
+        "cannot see: a partial API response, or a real collapse in traffic.",
+        "Whether other properties loaded normally on the same day. If they "
+        "did, it is this property; if none did, it is the loader.",
+    ),
+}
+
+GENERIC_DIAGNOSIS = (
+    "No standard diagnosis for this combination.",
+    "Compare the same window on the Pages and Queries tabs to see whether the "
+    "movement is isolated or site-wide.",
+)
+
+
+def diagnose(alert: dict) -> dict:
+    """Attach the likely cause and the first thing to check."""
+    key = (alert.get("group", alert.get("scope")), alert.get("metric"))
+    cause, check = DIAGNOSIS.get(key, GENERIC_DIAGNOSIS)
+    alert["cause"] = cause
+    alert["check"] = check
+    return alert
+
 
 def pct(cur: float, prev: float) -> float | None:
     """Percentage change, or None when there is no base to compare against."""
@@ -535,7 +660,10 @@ def render_email(alerts: list[dict], latest: dt.date, n: int, url: str) -> str:
                 f'color:#101828;vertical-align:top">{ent}'
                 f'<div style="color:#98a2b3;font-size:11px;margin-top:2px">{prop}</div></td>'
                 f'<td style="padding:7px 12px;font:13px system-ui,sans-serif;'
-                f'color:#475467;vertical-align:top">{a["message"]}</td>'
+                f'color:#475467;vertical-align:top">{a["message"]}'
+                f'<div style="margin-top:5px;font-size:11.5px;color:#667085;line-height:1.45">'
+                f'<b style="color:#475467">Likely:</b> {a.get("cause","")}<br>'
+                f'<b style="color:#475467">Check:</b> {a.get("check","")}</div></td>'
                 f'</tr>'
             )
 
@@ -655,6 +783,7 @@ def main() -> None:
         print(f"  query:    skipped ({exc})")
 
     alerts = [a for a in alerts if a["site_url"] not in excluded]
+    alerts = [diagnose(a) for a in alerts]
     alerts.sort(key=lambda a: (SEV_ORDER[a["severity"]], a["scope"], a["site_url"]))
 
     os.makedirs(args.out, exist_ok=True)

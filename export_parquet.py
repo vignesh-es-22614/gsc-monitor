@@ -1,4 +1,4 @@
-"""BigQuery -> Parquet, so the browser can run SQL over the raw rows.
+﻿"""BigQuery -> Parquet, so the browser can run SQL over the raw rows.
 
 The dashboard's precomputed windows cannot answer an arbitrary question: a
 custom date range crossed with country, device, page and query is a slice of
@@ -43,11 +43,21 @@ PROJECT = "it-security-online-marketing"
 DATASET = "gsc_data"
 
 # (view, columns). `site` is tiny and ships as one file per property.
+#
+# The page grain additionally carries the theme dimensions and the CRM
+# outcomes, because both are per-page facts and putting them in the same row
+# lets every tab group by them without a second fetch or a client-side join.
 GRAINS = {
     "site": ("v_site_daily", []),
     "page": ("v_page_daily", ["page"]),
     "query": ("v_query_daily", ["page", "query", "country", "device"]),
 }
+
+# Lead channel that lands in the page grain. Organic by default: this is a
+# Search Console dashboard, and putting paid leads next to organic clicks
+# invites the reading that the clicks produced them. SEM outnumbers SEO here
+# roughly 16,000 to 4,700, so the distinction is not academic.
+DEFAULT_LEAD_CHANNEL = "SEO"
 
 # Narrow types matter at 73M rows: int64 clicks would cost 4 bytes a row more
 # than anything in this data needs.
@@ -60,6 +70,19 @@ SCHEMA_TYPES = {
     "clicks": pa.int32(),
     "impressions": pa.int32(),
     "position": pa.float32(),
+    # Page dimensions from the Page Themes workbook.
+    "theme": pa.string(),
+    "sub_theme": pa.string(),
+    "page_type": pa.string(),
+    # CRM outcomes, both attributions. A lead's first-source page and
+    # last-source page are usually different, so these two sets describe
+    # different pages and must never be added together.
+    "leads_first": pa.int32(),
+    "conv_first": pa.int32(),
+    "rev_first": pa.float32(),
+    "leads_last": pa.int32(),
+    "conv_last": pa.int32(),
+    "rev_last": pa.float32(),
 }
 
 
@@ -81,23 +104,75 @@ def months_between(start: dt.date, end: dt.date) -> list[tuple[dt.date, dt.date]
     return out
 
 
-def fetch(bq, grain: str, site: str, lo: dt.date, hi: dt.date) -> pa.Table:
+def fetch(bq, grain: str, site: str, lo: dt.date, hi: dt.date,
+          lead_channel: str = DEFAULT_LEAD_CHANNEL) -> pa.Table:
     view, dims = GRAINS[grain]
     cols = ["date"] + dims
     select = ", ".join(cols)
     # Sorted on the filter columns so each row group covers a narrow slice and
     # DuckDB can skip whole groups from Parquet statistics alone.
     order = ", ".join(dims[:2]) or "date"
-    sql = f"""
-    SELECT {select},
-           CAST(SUM(clicks) AS INT64) AS clicks,
-           CAST(SUM(impressions) AS INT64) AS impressions,
-           SAFE_DIVIDE(SUM(position * impressions), SUM(impressions)) AS position
-    FROM `{PROJECT}.{DATASET}.{view}`
-    WHERE site_url = @site AND date BETWEEN '{lo}' AND '{hi}'
-    GROUP BY {select}
-    ORDER BY {order}
-    """
+
+    if grain != "page":
+        sql = f"""
+        SELECT {select},
+               CAST(SUM(clicks) AS INT64) AS clicks,
+               CAST(SUM(impressions) AS INT64) AS impressions,
+               SAFE_DIVIDE(SUM(position * impressions), SUM(impressions)) AS position
+        FROM `{PROJECT}.{DATASET}.{view}`
+        WHERE site_url = @site AND date BETWEEN '{lo}' AND '{hi}'
+        GROUP BY {select}
+        ORDER BY {order}
+        """
+    else:
+        # Page grain carries the dimensions and the outcomes. The lead joins
+        # are LEFT and on (page_path, date): most pages never produce a lead,
+        # and a page with no lead must still appear with its clicks.
+        sql = f"""
+        WITH f AS (
+          SELECT date, page,
+                 CAST(SUM(clicks) AS INT64) AS clicks,
+                 CAST(SUM(impressions) AS INT64) AS impressions,
+                 SAFE_DIVIDE(SUM(position*impressions), SUM(impressions)) AS position
+          FROM `{PROJECT}.{DATASET}.v_page_daily`
+          WHERE site_url = @site AND date BETWEEN '{lo}' AND '{hi}'
+          GROUP BY date, page
+        ),
+        lf AS (
+          SELECT date, page_path, SUM(leads) leads, SUM(conversions) conv,
+                 SUM(revenue) rev
+          FROM `{PROJECT}.{DATASET}.page_leads_daily`
+          WHERE attribution = 'first' AND date BETWEEN '{lo}' AND '{hi}'
+            AND ('{lead_channel}' = 'ALL' OR channel = '{lead_channel}')
+          GROUP BY date, page_path
+        ),
+        ll AS (
+          SELECT date, page_path, SUM(leads) leads, SUM(conversions) conv,
+                 SUM(revenue) rev
+          FROM `{PROJECT}.{DATASET}.page_leads_daily`
+          WHERE attribution = 'last' AND date BETWEEN '{lo}' AND '{hi}'
+            AND ('{lead_channel}' = 'ALL' OR channel = '{lead_channel}')
+          GROUP BY date, page_path
+        )
+        SELECT f.date, f.page, f.clicks, f.impressions, f.position,
+               IFNULL(d.theme, '(unthemed)')     AS theme,
+               IFNULL(d.sub_theme, '(unthemed)') AS sub_theme,
+               IFNULL(d.page_type, '(unknown)')  AS page_type,
+               CAST(IFNULL(lf.leads, 0) AS INT64) AS leads_first,
+               CAST(IFNULL(lf.conv, 0)  AS INT64) AS conv_first,
+               IFNULL(lf.rev, 0)                  AS rev_first,
+               CAST(IFNULL(ll.leads, 0) AS INT64) AS leads_last,
+               CAST(IFNULL(ll.conv, 0)  AS INT64) AS conv_last,
+               IFNULL(ll.rev, 0)                  AS rev_last
+        FROM f
+        LEFT JOIN `{PROJECT}.{DATASET}.page_dim` d
+          ON d.site_url = @site AND d.page = f.page
+        LEFT JOIN lf ON lf.page_path = `{PROJECT}.{DATASET}.norm_path`(f.page)
+                    AND lf.date = f.date
+        LEFT JOIN ll ON ll.page_path = `{PROJECT}.{DATASET}.norm_path`(f.page)
+                    AND ll.date = f.date
+        ORDER BY f.page
+        """
     job = bq.query(
         sql,
         job_config=bigquery.QueryJobConfig(
@@ -149,6 +224,14 @@ def main() -> None:
         help="Skip any month whose parquet file already exists on disk. For "
              "picking up an export that died part way without re-scanning "
              "what it already wrote.",
+    )
+    p.add_argument(
+        "--lead-channel",
+        default=DEFAULT_LEAD_CHANNEL,
+        help=("Which CRM channel's leads land in the page grain. 'SEO' (the "
+              "default) is the one comparable with organic clicks; 'ALL' "
+              "includes paid, email and the rest, which will not match what "
+              "Search Console earned."),
     )
     p.add_argument("--out", default=os.path.join(HERE, "docs", "data", "pq"))
     p.add_argument("--token", default=None)
@@ -214,7 +297,7 @@ def main() -> None:
                     total_rows += prior[key]["rows"]
                     skipped += 1
                     continue
-                tbl, scan = fetch(bq, grain, site, lo, hi)
+                tbl, scan = fetch(bq, grain, site, lo, hi, args.lead_channel)
                 scanned += scan
                 if tbl.num_rows == 0:
                     continue

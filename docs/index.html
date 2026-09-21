@@ -127,6 +127,10 @@ th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);whi
 th{font-size:11px;text-transform:uppercase;letter-spacing:.045em;color:var(--muted);
   font-weight:600;cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface);z-index:1}
 th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+/* A rule at each metric-group boundary, so the period columns of one metric
+   read as one block instead of a wall of numbers. */
+th.mgroup,td.mgroup{border-left:1px solid var(--axis)}
+thead tr:first-child th.mgroup{text-align:center;font-size:11px;color:var(--ink-2)}
 th[aria-sort]:after{content:"";margin-left:4px}
 th[aria-sort="descending"]:after{content:"â–¾"}
 th[aria-sort="ascending"]:after{content:"â–´"}
@@ -156,6 +160,9 @@ input::placeholder{color:var(--muted)}
 .alert .ent{font-size:13px;font-weight:500;overflow-wrap:anywhere}
 .alert .msg{font-size:12.5px;color:var(--ink-2);margin-top:2px}
 .alert .prop{font-size:11px;color:var(--muted);margin-top:2px}
+.alert .why{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5;
+  max-width:88ch}
+.alert .why b{color:var(--ink-2);font-weight:600;margin-right:5px}
 
 /* ------------------------------------------------------------- explore */
 .exgrid{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
@@ -578,8 +585,10 @@ function propView(){
     <div class="tabs" id="tabs">
       <button data-tab="pages" aria-selected="${S.tab==='pages'}">Pages</button>
       <button data-tab="queries" aria-selected="${S.tab==='queries'}">Queries</button>
+      <button data-tab="themes" aria-selected="${S.tab==='themes'}">Themes</button>
       <button data-tab="country" aria-selected="${S.tab==='country'}">Countries</button>
       <button data-tab="device" aria-selected="${S.tab==='device'}">Devices</button>
+      <button data-tab="trends" aria-selected="${S.tab==='trends'}">Trends</button>
       <button data-tab="reports" aria-selected="${S.tab==='reports'}">Reports</button>
       <button data-tab="alerts" aria-selected="${S.tab==='alerts'}">Alerts</button>
     </div>
@@ -594,8 +603,28 @@ function propView(){
 const DIM_TABS = {
   pages:   {dim:'page',    title:'Pages',     drill:'query'},
   queries: {dim:'query',   title:'Queries',   drill:'page'},
+  themes:  {dim:null,      title:'Themes',    drill:null,
+            // The workbook gives three nested cuts of the same taxonomy; one
+            // tab with a switch beats three near-identical tabs.
+            choices:['theme','sub_theme','page_type']},
   country: {dim:'country', title:'Countries', drill:null},
   device:  {dim:'device',  title:'Devices',   drill:null},
+};
+function tabDim(tab){
+  const c = DIM_TABS[tab];
+  return c.dim || (c.choices.includes(Q.themeDim) ? Q.themeDim : c.choices[0]);
+}
+
+const PERIODS = {
+  weekly:     'Weekly',
+  monthly:    'Monthly',
+  quarterly:  'Quarterly',
+  halfyearly: 'Half-yearly',
+  yearly:     'Yearly',
+};
+const METRIC_LABELS = {
+  clicks:'Clicks', impressions:'Impressions', ctr:'CTR', position:'Avg position',
+  leads:'Leads', conversions:'Conversions', revenue:'Revenue',
 };
 
 let SQLMOD = null;
@@ -603,9 +632,12 @@ const Q = {
   ready:false, status:'', err:null, busy:false, res:null,
   ran:null, ranCtx:null, pending:null,
   f:{ from:'', to:'', page:'', pageOp:'contains', query:'', queryOp:'contains',
-      join:'any', countries:[], devices:[] },
+      join:'any', countries:[], devices:[], attribution:'first' },
   minClicks:'', limit:0, open:null, drill:null,
   opts:{countries:[], devices:[]}, countrySearch:'', showAllCountries:false,
+  themeDim:'theme',
+  // Trend view
+  period:'weekly', metrics:['clicks','impressions'], trend:null, trendDim:'page',
 };
 
 function qDefaults(){
@@ -632,7 +664,7 @@ function qKey(){
 }
 // Property + tab alone. Switching either must re-query; editing a filter waits
 // for Apply, so the two are tracked separately.
-function qCtx(){ return JSON.stringify([S.prop, S.tab]); }
+function qCtx(){ return JSON.stringify([S.prop, S.tab, tabDim(S.tab)]); }
 
 async function qRun(force){
   // A click made while a query is in flight used to be dropped, which left the
@@ -646,7 +678,7 @@ async function qRun(force){
   // change while the query is in flight, and reading it afterwards labelled a
   // queries result as the device tab's -- 25,188 "devices".
   const ctx = qCtx(), tab = S.tab, slug = S.prop;
-  const dim = DIM_TABS[tab].dim;
+  const dim = tabDim(tab);
   const f = JSON.parse(JSON.stringify(Q.f));
 
   Q.busy = true; Q.err = null; Q.open = null; Q.drill = null;
@@ -682,6 +714,7 @@ function resOk(r){
 function repaintTab(){
   const tb = $('#tabbody');
   if(tb && DIM_TABS[S.tab]) renderDataTab(tb);
+  else if(tb && S.tab==='trends')  renderTrends(tb);
   else if(tb && S.tab==='reports') renderReports(tb);
 }
 
@@ -741,6 +774,17 @@ function filterBar(){
         </select></label>
       </div>
 
+      ${S.tab==='themes' ? `<div class="facet"><b>Group by</b>
+        ${DIM_TABS.themes.choices.map(d=>`<button class="chip${Q.themeDim===d?' on':''}"
+          data-themedim="${d}">${d.replace('_',' ')}</button>`).join('')}
+        <span style="color:var(--muted);font-size:11.5px;margin-left:6px">
+          from the Page Themes workbook</span></div>` : ''}
+      <div class="facet"><b>Leads from</b>
+        ${['first','last'].map(a=>`<button class="chip${f.attribution===a?' on':''}"
+          data-attr="${a}">${a} source</button>`).join('')}
+        <span style="color:var(--muted);font-size:11.5px;margin-left:6px">
+          first = the page that introduced the lead · last = the page it converted from ·
+          organic leads only</span></div>
       <div class="facet"><b>Device</b>
         ${Q.opts.devices.length
           ? Q.opts.devices.map(o=>`<button class="chip${f.devices.includes(o.k)?' on':''}"
@@ -810,6 +854,12 @@ function wireFilterBar(tb){
 
   // Clicking a facet chip re-queries immediately: it is a single click with an
   // unambiguous meaning, unlike a half-typed search term.
+  tb.querySelectorAll('.chip[data-themedim]').forEach(c=>c.onclick=()=>{
+    Q.themeDim = c.dataset.themedim; qRun(true);
+  });
+  tb.querySelectorAll('.chip[data-attr]').forEach(c=>c.onclick=()=>{
+    f.attribution = c.dataset.attr; qRun(true);
+  });
   tb.querySelectorAll('.chip[data-dim]').forEach(c=>c.onclick=()=>{
     const arr = f[c.dataset.dim], v = c.dataset.val, i = arr.indexOf(v);
     if(i<0) arr.push(v); else arr.splice(i,1);
@@ -821,7 +871,8 @@ function renderDataTab(tb){
   if(!tb) return;
   qDefaults();
   const cfg = DIM_TABS[S.tab], r = Q.res;
-  const label = k => cfg.dim==='page'
+  const dim = tabDim(S.tab);
+  const label = k => dim==='page'
     ? (String(k).replace(S.propData.site_url,'') || '/') : k;
 
   // Which body gets rendered decides what elements exist afterwards. The old
@@ -868,8 +919,10 @@ function renderDataTab(tb){
         Q.limit && r.rows.length>=Q.limit?' — row limit reached':''}</span>
         <span style="margin-left:auto"><button class="iconbtn" id="q_dl">↓ CSV · ${fmt(r.rows.length)} rows</button></span></h2>
       <div class="tablewrap"><table><thead><tr>
-        <th>${esc(cfg.dim)}</th><th class="num">Clicks</th><th class="num">Impressions</th>
-        <th class="num">CTR</th><th class="num">Avg pos</th></tr></thead><tbody>` +
+        <th>${esc(dim)}</th><th class="num">Clicks</th><th class="num">Impressions</th>
+        <th class="num">CTR</th><th class="num">Avg pos</th>
+        ${r.exact?`<th class="num">Leads</th><th class="num">Conv</th>
+          <th class="num">Revenue</th>`:''}</tr></thead><tbody>` +
       r.rows.slice(0,S.shown).map(x=>{
         const open = Q.open===x.k;
         let tr = `<tr class="${cfg.drill?'clickable':''}" data-k="${esc(x.k)}">
@@ -878,10 +931,13 @@ function renderDataTab(tb){
             <span class="bar" style="width:${(x.clicks/max*100).toFixed(1)}%"></span></td>
           <td class="num">${fmt(x.clicks)}</td><td class="num">${fmt(x.impressions)}</td>
           <td class="num">${x.ctr!=null?(x.ctr*100).toFixed(2)+'%':'–'}</td>
-          <td class="num">${fmt1(x.position)}</td></tr>`;
+          <td class="num">${fmt1(x.position)}</td>
+          ${r.exact?`<td class="num">${fmt(x.leads)}</td>
+            <td class="num">${fmt(x.conversions)}</td>
+            <td class="num">${money(x.revenue)}</td>`:''}</tr>`;
         if(open){
           const d = Q.drill;
-          tr += `<tr><td colspan="5" style="background:var(--surface-2);padding:0">
+          tr += `<tr><td colspan="${r.exact?8:5}" style="background:var(--surface-2);padding:0">
             <div style="padding:9px 14px">
               <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;
                 color:var(--muted);margin-bottom:6px">Top 10 ${esc(cfg.drill)}s ·
@@ -921,7 +977,7 @@ function renderDataTab(tb){
     const k = tr.dataset.k;
     if(Q.open===k){ Q.open=null; Q.drill=null; repaintTab(); return; }
     Q.open=k; Q.drill=null; repaintTab();
-    try{ Q.drill = await SQLMOD.drill(S.prop, Q.f, cfg.dim, k, cfg.drill, 10); }
+    try{ Q.drill = await SQLMOD.drill(S.prop, Q.f, dim, k, cfg.drill, 10); }
     catch(e){ Q.drill = []; }
     if(Q.open===k) repaintTab();
   });
@@ -942,9 +998,11 @@ function downloadRows(rows, name){
   const list = Array.isArray(rows) ? rows : (Q.res?.rows || []);
   if(!list.length) return;
   const dims = Array.isArray(rows) ? (REP.dims) : [DIM_TABS[S.tab].dim];
-  const head = [...dims,'clicks','impressions','ctr','position'];
+  const head = [...dims,'clicks','impressions','ctr','position',
+                'leads','conversions','revenue'];
   const body = list.map(r=>[...dims.map(d=>r[d]), r.clicks, r.impressions,
-    r.ctr==null?'':r.ctr, r.position==null?'':r.position].map(csvCell).join(','));
+    r.ctr==null?'':r.ctr, r.position==null?'':r.position,
+    r.leads??'', r.conversions??'', r.revenue??''].map(csvCell).join(','));
   // Leading BOM, written as an escape rather than an invisible character, so
   // Excel opens UTF-8 queries as text instead of mojibake.
   const blob = new Blob(['﻿'+head.join(',')+'\n'+body.join('\n')],
@@ -954,6 +1012,171 @@ function downloadRows(rows, name){
     dims.join('-')}_${Q.f.from}_${Q.f.to}`) + '.csv';
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },0);
+}
+
+// ============================================================== trends ===
+// One row per entity, one column group per metric, one column per period --
+// `page | clicks (w1, w2, ...) | impressions (w1, w2, ...)`. Ranking is done
+// over the whole range so the same rows appear in every period rather than a
+// different top-N per column.
+const money = v => v==null ? '–'
+  : v >= 1000 ? '$' + Math.round(v).toLocaleString('en-US')
+  : '$' + (Math.round(v*100)/100).toLocaleString('en-US');
+
+/** "14 Sep – 20 Sep 26" for a week, sensible shorthand for longer periods. */
+function periodLabel(iso, period){
+  const d = new Date(iso + 'T00:00:00Z');
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const yy = String(d.getUTCFullYear()).slice(2);
+  const m = MON[d.getUTCMonth()], day = d.getUTCDate();
+  if(period==='weekly'){
+    const e = new Date(d); e.setUTCDate(e.getUTCDate()+6);
+    return `${day} ${m} – ${e.getUTCDate()} ${MON[e.getUTCMonth()]} ${String(e.getUTCFullYear()).slice(2)}`;
+  }
+  if(period==='monthly')    return `${m} ${yy}`;
+  if(period==='quarterly')  return `Q${Math.floor(d.getUTCMonth()/3)+1} ${yy}`;
+  if(period==='halfyearly') return `${d.getUTCMonth()<6?'H1':'H2'} ${yy}`;
+  return String(d.getUTCFullYear());
+}
+
+const metricCell = (row, m) =>
+  m==='ctr'      ? (row.ctr!=null ? (row.ctr*100).toFixed(2)+'%' : '–')
+: m==='position' ? fmt1(row.position)
+: m==='revenue'  ? money(row.revenue)
+: fmt(row[m]);
+
+async function trendRun(){
+  if(Q.busy) return;
+  const ctx = qCtx(), slug = S.prop, dim = Q.trendDim;
+  const f = JSON.parse(JSON.stringify(Q.f));
+  const period = Q.period;
+  Q.busy = true; Q.err = null; repaintTab();
+  try{
+    await qBoot();
+    const t = await SQLMOD.trend(slug, f, dim, period, Q.limit || 200);
+    Q.trend = {...t, dim, period};
+    Q.ranCtx = ctx;
+  }catch(e){ Q.err = e.message || String(e); Q.trend = null; }
+  finally{ Q.busy = false; repaintTab(); }
+}
+
+function trendCSV(){
+  const t = Q.trend; if(!t) return;
+  const byKey = new Map();
+  for(const r of t.rows){
+    if(!byKey.has(r.k)) byKey.set(r.k, {});
+    byKey.get(r.k)[r.period] = r;
+  }
+  const head = [t.dim];
+  for(const m of Q.metrics) for(const p of t.periods)
+    head.push(`${m} ${periodLabel(p, t.period)}`);
+  const body = [...byKey.entries()].map(([k, per])=>{
+    const cells = [k];
+    for(const m of Q.metrics) for(const p of t.periods){
+      const row = per[p];
+      cells.push(row==null ? '' : (row[m]==null ? '' : row[m]));
+    }
+    return cells.map(csvCell).join(',');
+  });
+  const blob = new Blob(['﻿'+head.join(',')+'\n'+body.join('\n')],
+    {type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = `gsc_trend_${S.propData.label.replace(/[^a-z0-9]+/gi,'-')}_${t.dim}_${t.period}_${Q.f.from}_${Q.f.to}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },0);
+}
+
+function renderTrends(tb){
+  if(!tb) return;
+  qDefaults();
+  const t = Q.trend;
+  const DIMS = ['page','query','country','device','theme','sub_theme','page_type'];
+
+  const controls = `<div class="card" style="margin-bottom:14px">
+    <h2>Trend <span class="note">every period side by side, for whichever
+      metrics you pick</span></h2>
+    <div class="body"><div class="exgrid">
+      <label>Break down by<select id="t_dim">
+        ${DIMS.map(d=>`<option value="${d}" ${Q.trendDim===d?'selected':''}>${d.replace('_',' ')}</option>`).join('')}
+      </select></label>
+      <label>Period<select id="t_period">
+        ${Object.entries(PERIODS).map(([k,v])=>`<option value="${k}" ${Q.period===k?'selected':''}>${v}</option>`).join('')}
+      </select></label>
+      <label>Rows<select id="t_limit">
+        ${[50,200,1000].map(n=>`<option value="${n}" ${Q.limit===n?'selected':''}>${n}</option>`).join('')}
+      </select></label>
+      <label>&nbsp;<button class="iconbtn primary" id="t_run">${Q.busy?'Running…':'Apply'}</button></label>
+    </div>
+    <div class="facet"><b>Metrics</b>
+      ${Object.entries(METRIC_LABELS).map(([k,v])=>`<button class="chip${Q.metrics.includes(k)?' on':''}"
+        data-metric="${k}">${v}</button>`).join('')}
+      <span style="color:var(--muted);font-size:11.5px;margin-left:6px">
+        leads, conversions and revenue need the page grain — clear the query,
+        country and device filters to see them</span>
+    </div></div>
+  </div>`;
+
+  let body;
+  if(Q.err){
+    body = `<div class="card"><div class="empty">
+      <b style="color:var(--critical)">Query failed.</b><br>${esc(Q.err)}</div></div>`;
+  }else if(Q.busy){
+    body = `<div class="card"><div class="spinner" id="q_status">${esc(Q.status||'Building trend…')}</div></div>`;
+  }else if(!t || !t.rows.length){
+    body = `<div class="card"><div class="empty">
+      Pick a breakdown, a period and one or more metrics, then press
+      <b>Apply</b>.</div></div>`;
+  }else{
+    const byKey = new Map();
+    for(const r of t.rows){
+      if(!byKey.has(r.k)) byKey.set(r.k, {});
+      byKey.get(r.k)[r.period] = r;
+    }
+    const metrics = Q.metrics.filter(m =>
+      t.exact || !['leads','conversions','revenue'].includes(m));
+    const label = k => t.dim==='page'
+      ? (String(k).replace(S.propData.site_url,'') || '/') : k;
+
+    body = `<div class="card">
+      <h2>${esc(t.dim.replace('_',' '))} by ${esc(PERIODS[t.period].toLowerCase())}
+        <span class="note">${fmt(byKey.size)} rows × ${t.periods.length} periods${
+          t.exact?'':' · query grain, understated'}</span>
+        <span style="margin-left:auto"><button class="iconbtn" id="t_dl">↓ CSV</button></span></h2>
+      <div class="tablewrap"><table><thead>
+        <tr><th rowspan="2" style="vertical-align:bottom">${esc(t.dim.replace('_',' '))}</th>
+          ${metrics.map(m=>`<th class="num mgroup" colspan="${t.periods.length}">${METRIC_LABELS[m]}</th>`).join('')}</tr>
+        <tr>${metrics.map(m=>t.periods.map((p,i)=>
+          `<th class="num${i===0?' mgroup':''}">${esc(periodLabel(p, t.period))}</th>`).join('')).join('')}</tr>
+      </thead><tbody>` +
+      [...byKey.entries()].map(([k, per])=>`<tr>
+        <td class="ent" title="${esc(k)}">${esc(label(k))}</td>
+        ${metrics.map(m=>t.periods.map((p,i)=>{
+          const row = per[p];
+          return `<td class="num${i===0?' mgroup':''}">${row? metricCell(row, m) : '–'}</td>`;
+        }).join('')).join('')}
+      </tr>`).join('') +
+      `</tbody></table></div>
+      <p class="caveat">Ranked by total clicks across the whole range, so the
+      same rows appear in every period rather than a different top-N per
+      column.</p><div style="height:12px"></div></div>`;
+  }
+
+  tb.innerHTML = controls + filterBar() + body;
+  wireFilterBar(tb);
+
+  const on = (id,fn,ev='onchange')=>{ const el=tb.querySelector('#'+id); if(el) el[ev]=fn; };
+  on('t_dim',    e=>{ Q.trendDim = e.target.value; });
+  on('t_period', e=>{ Q.period   = e.target.value; });
+  on('t_limit',  e=>{ Q.limit    = +e.target.value; });
+  on('t_run',    ()=>trendRun(), 'onclick');
+  on('t_dl',     trendCSV, 'onclick');
+  tb.querySelectorAll('.chip[data-metric]').forEach(c=>c.onclick=()=>{
+    const m=c.dataset.metric, i=Q.metrics.indexOf(m);
+    if(i<0) Q.metrics.push(m); else if(Q.metrics.length>1) Q.metrics.splice(i,1);
+    repaintTab();
+  });
+
+  if(!Q.trend && !Q.busy && !Q.err) trendRun();
 }
 
 // ============================================================= reports ===
@@ -1170,6 +1393,8 @@ function alertsView(scopeSite){
           <span class="sev ${x.severity}">${icon[x.severity]} ${x.severity.toUpperCase()}</span>
           <div><div class="ent">${esc(ent)}</div>
             <div class="msg">${esc(x.message)}</div>
+            ${x.cause?`<div class="why"><b>Likely cause</b> ${esc(x.cause)}</div>`:''}
+            ${x.check?`<div class="why"><b>Check first</b> ${esc(x.check)}</div>`:''}
             ${scopeSite?'':`<div class="prop">${esc(x.site_url)}</div>`}</div></div>`;
       }).join('') + `</div>`;
   }
@@ -1227,7 +1452,8 @@ function render(){
 
   // --- tab body ----------------------------------------------------------
   const tb=$('#tabbody');
-  if(DIM_TABS[S.tab])      renderDataTab(tb);
+  if(DIM_TABS[S.tab])        renderDataTab(tb);
+  else if(S.tab==='trends')  renderTrends(tb);
   else if(S.tab==='reports') renderReports(tb);
   else                       tb.innerHTML = alertsView(S.propData.site_url);
 
