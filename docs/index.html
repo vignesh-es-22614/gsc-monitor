@@ -132,8 +132,8 @@ th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
 th.mgroup,td.mgroup{border-left:1px solid var(--axis)}
 thead tr:first-child th.mgroup{text-align:center;font-size:11px;color:var(--ink-2)}
 th[aria-sort]:after{content:"";margin-left:4px}
-th[aria-sort="descending"]:after{content:"â–¾"}
-th[aria-sort="ascending"]:after{content:"â–´"}
+th[aria-sort="descending"]:after{content:"▾"}
+th[aria-sort="ascending"]:after{content:"▴"}
 tbody tr:hover{background:var(--surface-2)}
 td.ent{max-width:min(900px,48vw);overflow:hidden;text-overflow:ellipsis}
 td.ent .sub{color:var(--muted);font-size:11px}
@@ -206,11 +206,11 @@ footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--border);
 <header class="top">
   <div class="brand">
     <h1>Search Console Monitor</h1>
-    <div class="sub" id="subtitle">Loadingâ€¦</div>
+    <div class="sub" id="subtitle">Loading…</div>
   </div>
   <div class="toolbar">
     <div class="seg" role="group" aria-label="Comparison window" id="winseg"></div>
-    <button class="iconbtn" id="themebtn" title="Toggle theme">â— Theme</button>
+    <button class="iconbtn" id="themebtn" title="Toggle theme">◐ Theme</button>
   </div>
 </header>
 
@@ -226,13 +226,13 @@ footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--border);
     </div>
     <p class="caveat" style="padding-left:2px">
       <b>manageengine.com</b> is a URL-prefix property that contains the product
-      properties listed under it. Their figures overlap â€” never add properties together.
+      properties listed under it. Their figures overlap — never add properties together.
     </p>
   </aside>
 
   <!-- ------------------------------------------------------ main region -->
   <main id="main">
-    <div class="spinner">Loading dataâ€¦</div>
+    <div class="spinner">Loading data…</div>
   </main>
 </div>
 
@@ -273,8 +273,8 @@ function applyFilter(rows, f){
   return out;
 }
 const $ = s => document.querySelector(s);
-const fmt = n => n==null ? 'â€“' : n.toLocaleString('en-US');
-const fmt1 = n => n==null ? 'â€“' : n.toFixed(1);
+const fmt = n => n==null ? '–' : n.toLocaleString('en-US');
+const fmt1 = n => n==null ? '–' : n.toFixed(1);
 const pctOf = (a,b) => (!b) ? null : (a-b)/b*100;
 
 function deltaHTML(cur, prev, opts={}){
@@ -283,7 +283,7 @@ function deltaHTML(cur, prev, opts={}){
   // Position is the one metric where a rising number is bad.
   const good = opts.lowerIsBetter ? d < 0 : d > 0;
   const cls = Math.abs(d) < 0.05 ? '' : (good ? 'up' : 'down');
-  const arrow = Math.abs(d) < 0.05 ? '' : (d>0 ? 'â†‘' : 'â†“');
+  const arrow = Math.abs(d) < 0.05 ? '' : (d>0 ? '↑' : '↓');
   return `<span class="delta ${cls}">${arrow}${Math.abs(d).toFixed(1)}%</span>`;
 }
 // Position is the one metric where the number and the outcome move opposite
@@ -291,11 +291,11 @@ function deltaHTML(cur, prev, opts={}){
 // ambiguous here whichever way it points, so show the signed change instead
 // and let colour carry good/bad.
 function posDelta(cur, prev, verbose){
-  if(cur==null||prev==null) return '<span style="color:var(--muted)">â€“</span>';
+  if(cur==null||prev==null) return '<span style="color:var(--muted)">–</span>';
   const d = cur - prev;                       // positive = ranking worse
   if(Math.abs(d) < 0.05) return '<span class="delta">0.0</span>';
   const word = verbose ? (d<0 ? ' better' : ' worse') : '';
-  return `<span class="delta ${d<0?'up':'down'}">${d>0?'+':'âˆ’'}${Math.abs(d).toFixed(1)}${word}</span>`;
+  return `<span class="delta ${d<0?'up':'down'}">${d>0?'+':'−'}${Math.abs(d).toFixed(1)}${word}</span>`;
 }
 const esc = s => String(s??'').replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -401,7 +401,7 @@ function healthList(el){
   el.innerHTML = `<div style="padding:2px 15px 14px">` + rows.map(p=>{
     const stale = p.days_behind > 2, gaps = p.missing_days > 0;
     const sev = stale ? 'critical' : gaps ? 'serious' : 'good';
-    const icon = stale ? 'â–²' : gaps ? 'â—†' : 'â—';
+    const icon = stale ? '▲' : gaps ? '◆' : '●';
     const word = stale ? `${p.days_behind}d behind`
                : gaps  ? `${p.missing_days} day${p.missing_days>1?'s':''} missing`
                : 'current';
@@ -450,11 +450,11 @@ function renderPropList(){
       const d=p.windows[w]||{};
       const dl=deltaHTML(d.clicks, d.clicks_prev);
       const stale = p.days_behind > 2
-        ? `<span style="color:var(--serious)" title="Behind the newest loaded date">âš  ${p.days_behind}d</span>` : '';
+        ? `<span style="color:var(--serious)" title="Behind the newest loaded date">⚠ ${p.days_behind}d</span>` : '';
       return `<button data-slug="${p.slug}" aria-current="${S.prop===p.slug}"
         aria-label="${esc(p.label)}, ${fmt(d.clicks)} clicks">
         <div class="pname">${esc(p.label)}${p.is_root?'<span class="rootbadge">CONTAINS OTHERS</span>':''}${
-          p.source==='search_console_api'?'<span class="rootbadge" title="Not in BigQuery yet â€” pulled live from the Search Console API">LIVE API</span>':''}</div>
+          p.source==='search_console_api'?'<span class="rootbadge" title="Not in BigQuery yet — pulled live from the Search Console API">LIVE API</span>':''}</div>
         <div class="pmeta"><span>${fmt(d.clicks)} clicks</span> ${dl} ${stale}</div>
       </button>`;
     }).join('');
@@ -472,15 +472,15 @@ function alertBanner(){
   if(!a){ el.innerHTML=''; return; }
   const c=a.counts.critical, w=a.counts.warning;
   if(!c && !w){
-    el.innerHTML = `<div class="banner"><span style="color:var(--good)">â—</span>
+    el.innerHTML = `<div class="banner"><span style="color:var(--good)">●</span>
       <div><b>All clear.</b> No property, page or query breached its threshold over the
       last ${a.compare_days} days, and every property loaded on time.</div></div>`;
     return;
   }
   el.innerHTML = `<div class="banner">
-    <span style="color:var(--${c?'critical':'serious'})">${c?'â–²':'â–²'}</span>
+    <span style="color:var(--${c?'critical':'serious'})">${c?'▲':'▲'}</span>
     <div><b>${c} critical, ${w} warning</b> over the last ${a.compare_days} days vs the
-    ${a.compare_days} before. <a href="#" id="toalerts">Review them â†’</a></div></div>`;
+    ${a.compare_days} before. <a href="#" id="toalerts">Review them →</a></div></div>`;
   $('#toalerts').onclick = e => { e.preventDefault(); S.prop=null; S.tab='alerts'; render(); };
 }
 
@@ -502,7 +502,7 @@ function overview(){
     <div class="tile"><div class="k">Clicks · sub-properties</div><div class="v">${fmt(totClicks)}</div>
       <div class="d">sum of the ${nonRoot.length} non-root properties</div></div>
     <div class="tile"><div class="k">Alerts</div>
-      <div class="v">${S.summary.alerts? S.summary.alerts.alerts.length : 'â€“'}</div>
+      <div class="v">${S.summary.alerts? S.summary.alerts.alerts.length : '–'}</div>
       <div class="d">${S.summary.alerts? S.summary.alerts.counts.critical+' critical' : 'not yet run'}</div></div>
   </div>`;
 
@@ -524,7 +524,7 @@ function overview(){
           <div class="sub">${esc(p.site_url)}</div></td>
         <td class="num">${fmt(d.clicks)}</td><td class="num">${deltaHTML(d.clicks,d.clicks_prev)}</td>
         <td class="num">${fmt(d.impressions)}</td><td class="num">${deltaHTML(d.impressions,d.impressions_prev)}</td>
-        <td class="num">${d.impressions? (d.clicks/d.impressions*100).toFixed(2)+'%':'â€“'}</td>
+        <td class="num">${d.impressions? (d.clicks/d.impressions*100).toFixed(2)+'%':'–'}</td>
         <td class="num">${fmt1(d.position)}</td><td class="num">${posDelta(d.position,d.position_prev)}</td>
         <td class="num">${fmt(d.pages)}</td>
         <td class="num" style="color:var(--muted)">${p.earliest_date}</td>
@@ -553,7 +553,7 @@ function propView(){
     <div class="tile"><div class="k">Impressions</div><div class="v">${fmt(d.impressions)}</div>
       <div class="d">${deltaHTML(d.impressions,d.impressions_prev)} from ${fmt(d.impressions_prev)}</div></div>
     <div class="tile"><div class="k">CTR</div>
-      <div class="v">${d.impressions?(d.clicks/d.impressions*100).toFixed(2)+'%':'â€“'}</div>
+      <div class="v">${d.impressions?(d.clicks/d.impressions*100).toFixed(2)+'%':'–'}</div>
       <div class="d">${d.impressions_prev?(d.clicks_prev/d.impressions_prev*100).toFixed(2)+'% prior':''}</div></div>
     <div class="tile"><div class="k">Avg position</div><div class="v">${fmt1(d.position)}</div>
       <div class="d">${posDelta(d.position,d.position_prev,true)} than ${fmt1(d.position_prev)} · lower is better</div></div>
@@ -577,7 +577,7 @@ function propView(){
       <div class="chartgrid" style="margin:0;padding:12px;gap:12px">
         <figure><figcaption>Clicks</figcaption><div id="c_clicks"></div></figure>
         <figure><figcaption>Impressions</figcaption><div id="c_impr"></div></figure>
-        <figure><figcaption>Average position <span class="hint">lower is better â€” axis inverted</span></figcaption>
+        <figure><figcaption>Average position <span class="hint">lower is better — axis inverted</span></figcaption>
           <div id="c_pos"></div></figure>
       </div>
     </div>
@@ -1328,7 +1328,7 @@ function alertsView(scopeSite){
     <div class="empty">Nothing breached a threshold${scopeSite?' for this property':''}
     over the last ${a.compare_days} days.</div></div>`;
 
-  const icon = {critical:'â–²', warning:'â—†', info:'â—'};
+  const icon = {critical:'▲', warning:'◆', info:'●'};
   // Ordered by what someone acts on first: a broken pipeline makes everything
   // below it meaningless, then losses, then slipping position, then gains.
   const groups = {
@@ -1358,8 +1358,8 @@ function alertsView(scopeSite){
             ${scopeSite?'':`<div class="prop">${esc(x.site_url)}</div>`}</div></div>`;
       }).join('') + `</div>`;
   }
-  return `<div class="banner"><span>âš™</span><div>Thresholds live in
-    <b>alerts.config.json</b> in the repo â€” there is no server to save settings to.
+  return `<div class="banner"><span>⚙</span><div>Thresholds live in
+    <b>alerts.config.json</b> in the repo — there is no server to save settings to.
     Current window: last <b>${a.compare_days} days</b> vs the ${a.compare_days} before.</div></div>` + out;
 }
 
@@ -1431,15 +1431,15 @@ function paintFooter(){
     window and no stored history until the backfill reaches them.<br>` : '') + `
     Page figures come from a page-grain Search Console pull and match the UI's Pages report exactly.
     Query, country and device figures come from a query-grain pull, which Search Console strips of
-    anonymised queries â€” they rank correctly but under-count.<br>
-    Page history starts ${s.properties.length? s.properties.map(p=>p.earliest_date).sort()[0] : 'â€“'};
+    anonymised queries — they rank correctly but under-count.<br>
+    Page history starts ${s.properties.length? s.properties.map(p=>p.earliest_date).sort()[0] : '–'};
     the API serves only a rolling ~16 months and nothing earlier can be recovered.
     Data through <b>${s.latest_date}</b>, built ${s.generated_at.replace('T',' ').replace('+00:00',' UTC')}.`;
 }
 
 // ================================================================= load ===
 async function loadProp(){
-  $('#main').innerHTML = '<div class="spinner">Loading propertyâ€¦</div>';
+  $('#main').innerHTML = '<div class="spinner">Loading property…</div>';
   try{
     const r = await fetch(`data/prop_${S.prop}.json`, {cache:'no-cache'});
     if(!r.ok) throw new Error(r.status);
@@ -1471,8 +1471,26 @@ function initTheme(){
     const r = await fetch('data/summary.json', {cache:'no-cache'});
     S.summary = await r.json();
   }catch(e){
-    $('#main').innerHTML = `<div class="card"><div class="empty">
-      Could not load <code>data/summary.json</code>. Run <code>build_payload.py</code> first.</div></div>`;
+    // The usual cause is not a missing build: it is GitHub's legacy branch
+    // deployment republishing docs/ from the repo, where the generated data is
+    // gitignored. Say that, because "run build_payload.py" sends someone to
+    // fix the wrong thing.
+    $('#main').innerHTML = `<div class="card"><div class="body">
+      <h2 style="border:0;padding:0 0 8px;font-size:15px">No data on this deployment</h2>
+      <p style="color:var(--ink-2);font-size:13px;line-height:1.6;max-width:70ch">
+        <code>data/summary.json</code> returned 404. The page loaded, so the site
+        is being served — but from a deployment that has no data in it.</p>
+      <p style="color:var(--ink-2);font-size:13px;line-height:1.6;max-width:70ch">
+        This happens when GitHub's <b>branch</b> deployment publishes
+        <code>docs/</code> straight from the repository, where the generated
+        payload is deliberately not committed (it is ~500&nbsp;MB). The fix is
+        <b>Settings → Pages → Source: GitHub Actions</b>, then re-run
+        <b>Daily Search Console refresh</b>. The workflow also re-deploys on
+        every push, so this normally clears itself within a few minutes.</p>
+      <p style="color:var(--muted);font-size:12px">
+        Locally instead? Run <code>build_payload.py</code> and
+        <code>export_parquet.py</code>, then serve <code>docs/</code>.</p>
+    </div></div>`;
     return;
   }
   S.win = S.summary.windows.includes(28) ? 28 : S.summary.windows[0];
