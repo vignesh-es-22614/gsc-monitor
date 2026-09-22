@@ -81,9 +81,17 @@ function where(f, grain) {
   const textClause = (col, terms, op) => {
     const list = terms.split(',').map(t => t.trim()).filter(Boolean);
     if (!list.length) return null;
-    // Case-insensitive substring, the same semantics as the table filters.
-    const each = list.map(t => `lower(${col}) LIKE ${lit('%' + t.toLowerCase() + '%')}`);
-    const joined = each.join(f.join === 'all' ? ' AND ' : ' OR ');
+    // All three modes are case-insensitive, matching the table filters.
+    // `exact` is equality, not a substring: "exact" on a page filter means
+    // that URL and nothing under it, and on a query means that query and not
+    // the longer ones containing it.
+    const each = op === 'exact'
+      ? list.map(t => `lower(${col}) = ${lit(t.toLowerCase())}`)
+      : list.map(t => `lower(${col}) LIKE ${lit('%' + t.toLowerCase() + '%')}`);
+    // Several exact terms are alternatives, never a conjunction -- a column
+    // cannot equal two different values, so ALL would always return nothing.
+    const glue = (f.join === 'all' && op !== 'exact') ? ' AND ' : ' OR ';
+    const joined = each.join(glue);
     return op === 'not' ? `NOT (${joined})` : `(${joined})`;
   };
 
@@ -106,14 +114,15 @@ function where(f, grain) {
  * it converted from. They describe different pages and are never summed
  * together, so the caller picks one and gets that one.
  */
-function metrics(grain, attribution = 'first') {
+function metrics(grain, attribution = 'first', hasLeads = true) {
   const base = `
   SUM(clicks)::BIGINT AS clicks,
   SUM(impressions)::BIGINT AS impressions,
   SUM(clicks) / NULLIF(SUM(impressions), 0) AS ctr,
   SUM(position * impressions) / NULLIF(SUM(impressions), 0) AS position`;
-  if (grain !== 'page') {
-    // Keep the shape identical so the table code needs no special case.
+  // Either the wrong grain, or page files written before the CRM columns
+  // existed. Keep the shape identical so the table code needs no special case.
+  if (grain !== 'page' || !hasLeads) {
     return base + `,
   NULL::BIGINT AS leads, NULL::BIGINT AS conversions, NULL::DOUBLE AS revenue`;
   }
@@ -122,6 +131,41 @@ function metrics(grain, attribution = 'first') {
   SUM(leads_${s})::BIGINT AS leads,
   SUM(conv_${s})::BIGINT AS conversions,
   SUM(rev_${s})::DOUBLE AS revenue`;
+}
+
+/**
+ * Which optional columns a set of Parquet files actually has.
+ *
+ * The published files are carried between CI runs in a cache, so a schema
+ * change does not reach them until they are rebuilt: a page file written
+ * before the theme and CRM columns existed is still perfectly valid, and
+ * selecting leads_first from it fails the whole query. Probing costs one
+ * footer read and is cached per file set.
+ */
+const COLS_CACHE = new Map();
+async function columnsOf(src, key) {
+  if (COLS_CACHE.has(key)) return COLS_CACHE.get(key);
+  let set = new Set();
+  try {
+    const rows = await run(`DESCRIBE SELECT * FROM ${src} LIMIT 0`);
+    set = new Set(rows.map(r => r.column_name));
+  } catch (e) {
+    // If even DESCRIBE fails the real query will report it properly.
+  }
+  COLS_CACHE.set(key, set);
+  return set;
+}
+
+/** Capability probe for one (grain, property, range). */
+async function caps(grain, slug, f) {
+  const src = source(grain, slug, f);
+  if (!src) return { src: null, hasLeads: false, hasThemes: false };
+  const cols = await columnsOf(src, `${grain}|${slug}|${f.from}|${f.to}`);
+  return {
+    src,
+    hasLeads: cols.has('leads_first') && cols.has('rev_last'),
+    hasThemes: cols.has('theme'),
+  };
 }
 
 function source(grain, slug, f) {
@@ -184,10 +228,10 @@ async function run(sql) {
 /** Top-level totals for the current filter, on the most exact grain available. */
 export async function totals(slug, f, dims = []) {
   const grain = grainFor(dims, f);
-  const src = source(grain, slug, f);
+  const { src, hasLeads } = await caps(grain, slug, f);
   if (!src) return null;
   const [row] = await run(
-    `SELECT ${metrics(grain, f.attribution)} FROM ${src} WHERE ${where(f, grain)}`);
+    `SELECT ${metrics(grain, f.attribution, hasLeads)} FROM ${src} WHERE ${where(f, grain)}`);
   if (row) { row.grain = grain; row.exact = grain === 'page'; }
   return row;
 }
@@ -201,11 +245,18 @@ export async function totals(slug, f, dims = []) {
 export async function group(slug, f, dims, limit = null, minClicks = 0) {
   const list = Array.isArray(dims) ? dims : [dims];
   const grain = grainFor(list, f);
-  const src = source(grain, slug, f);
+  const { src, hasLeads, hasThemes } = await caps(grain, slug, f);
   if (!src) return { rows: [], grain, exact: grain === 'page' };
+  // Grouping by a theme column the published files predate would fail the
+  // query; say so instead, the same way an impossible grain combination does.
+  if (!hasThemes && list.some(d => PAGE_ONLY_DIMS.includes(d))) {
+    throw new Error(
+      'The published data does not carry theme columns yet. Re-run the '
+      + 'workflow so the Parquet export rebuilds with them.');
+  }
   const sel = list.join(', ');
   const rows = await run(`
-    SELECT ${sel}, ${metrics(grain, f.attribution)}
+    SELECT ${sel}, ${metrics(grain, f.attribution, hasLeads)}
     FROM ${src}
     WHERE ${where(f, grain)} AND ${list.map(d => `${d} IS NOT NULL`).join(' AND ')}
     GROUP BY ${sel}
@@ -220,17 +271,17 @@ export async function group(slug, f, dims, limit = null, minClicks = 0) {
 /** Daily series for charting, honouring every active filter. */
 export async function daily(slug, f, dims = []) {
   const grain = grainFor(dims, f);
-  const src = source(grain, slug, f);
+  const { src, hasLeads } = await caps(grain, slug, f);
   if (!src) return [];
   return run(`
-    SELECT date::VARCHAR AS d, ${metrics(grain, f.attribution)}
+    SELECT date::VARCHAR AS d, ${metrics(grain, f.attribution, hasLeads)}
     FROM ${src} WHERE ${where(f, grain)}
     GROUP BY d ORDER BY d`);
 }
 
 /** Distinct values of a dimension, to populate the multi-selects. */
 export async function distinct(slug, f, dim) {
-  const src = source('query', slug, f);
+  const { src } = await caps('query', slug, f);
   if (!src) return [];
   return run(`
     SELECT ${dim} AS k, SUM(clicks)::BIGINT AS clicks
@@ -249,7 +300,7 @@ export async function distinct(slug, f, dim) {
  * screen.
  */
 export async function drill(slug, f, dim, value, into, limit = 10) {
-  const src = source('query', slug, f);
+  const { src } = await caps('query', slug, f);
   if (!src) return [];
   return run(`
     SELECT ${into} AS k, ${metrics('query', f.attribution)}
@@ -292,8 +343,13 @@ function bucketExpr(period) {
 export async function trend(slug, f, dim, period, limit = 200) {
   const dims = [dim];
   const grain = grainFor(dims, f);
-  const src = source(grain, slug, f);
+  const { src, hasLeads, hasThemes } = await caps(grain, slug, f);
   if (!src) return { rows: [], periods: [], grain, exact: grain === 'page' };
+  if (!hasThemes && PAGE_ONLY_DIMS.includes(dim)) {
+    throw new Error(
+      'The published data does not carry theme columns yet. Re-run the '
+      + 'workflow so the Parquet export rebuilds with them.');
+  }
   const b = bucketExpr(period);
 
   // Rank entities on the whole range first, so the table shows the same top N
@@ -310,7 +366,7 @@ export async function trend(slug, f, dim, period, limit = 200) {
       FROM ${src} WHERE ${where(f, grain)} AND ${dim} IS NOT NULL
       GROUP BY k ORDER BY total DESC LIMIT ${Number(limit) || 200}
     )
-    SELECT s.${dim} AS k, ${b}::VARCHAR AS period, ${metrics(grain, f.attribution)}
+    SELECT s.${dim} AS k, ${b}::VARCHAR AS period, ${metrics(grain, f.attribution, hasLeads)}
     FROM ${src} s
     JOIN ranked r ON r.k = s.${dim}
     WHERE ${where(f, grain)} AND s.${dim} IS NOT NULL

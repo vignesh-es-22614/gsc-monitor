@@ -246,32 +246,11 @@ footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--border);
 const S = {
   summary:null, prop:null, propData:null, win:28, tab:'pages',
   smooth:true, sort:{key:'c',dir:-1}, openPage:null, range:180, shown:300,
-  // One filter set per tab, so switching tabs does not silently carry a
-  // page pattern over onto queries.
-  filters:{
-    pages:{op:'contains', terms:'', join:'any', min:''},
-    queries:{op:'contains', terms:'', join:'any', min:''},
-  },
 };
 
-// "contains" / "does not contain" over a comma-separated term list, matched
-// with ANY or ALL. Terms are trimmed and case-folded; empty ones are dropped
-// so a trailing comma does not match everything.
-function applyFilter(rows, f){
-  const terms = f.terms.split(',').map(t=>t.trim().toLowerCase()).filter(Boolean);
-  let out = rows;
-  if(terms.length){
-    const hit = k => f.join==='all' ? terms.every(t=>k.includes(t))
-                                    : terms.some(t=>k.includes(t));
-    out = out.filter(r=>{
-      const k = String(r.k).toLowerCase();
-      return f.op==='contains' ? hit(k) : !hit(k);
-    });
-  }
-  const min = parseInt(f.min, 10);
-  if(!isNaN(min)) out = out.filter(r=>r.c >= min);
-  return out;
-}
+// Filtering happens in SQL now, not in the browser -- every tab queries the
+// Parquet through DuckDB, so there is no client-side row list left to filter.
+// See where() in sql.js for contains / does not contain / exact match.
 const $ = s => document.querySelector(s);
 const fmt = n => n==null ? '–' : n.toLocaleString('en-US');
 const fmt1 = n => n==null ? '–' : n.toFixed(1);
@@ -774,6 +753,7 @@ function filterBar(){
           <select id="q_pageop">
             <option value="contains" ${f.pageOp==='contains'?'selected':''}>contains</option>
             <option value="not" ${f.pageOp==='not'?'selected':''}>does not contain</option>
+            <option value="exact" ${f.pageOp==='exact'?'selected':''}>exact match</option>
           </select>
           <input type="search" id="q_page" value="${esc(f.page)}" placeholder="/kb/, help  — comma-separated">
         </span></label>
@@ -781,6 +761,7 @@ function filterBar(){
           <select id="q_queryop">
             <option value="contains" ${f.queryOp==='contains'?'selected':''}>contains</option>
             <option value="not" ${f.queryOp==='not'?'selected':''}>does not contain</option>
+            <option value="exact" ${f.queryOp==='exact'?'selected':''}>exact match</option>
           </select>
           <input type="search" id="q_query" value="${esc(f.query)}" placeholder="locked out, adaudit">
         </span></label>

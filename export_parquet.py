@@ -59,6 +59,16 @@ GRAINS = {
 # roughly 16,000 to 4,700, so the distinction is not academic.
 DEFAULT_LEAD_CHANNEL = "SEO"
 
+# Bump whenever the Parquet column set changes.
+#
+# --resume and --refresh-days both keep files that already exist, and CI
+# carries them between runs in a cache, so a schema change otherwise never
+# reaches the published data: the page grain gained theme and CRM columns and
+# the browser went on querying year-old files that lacked them, failing with
+# "Referenced column leads_first not found". A file whose recorded version is
+# not this one is rebuilt no matter which resume flag is set.
+SCHEMA_VERSION = 2
+
 # Narrow types matter at 73M rows: int64 clicks would cost 4 bytes a row more
 # than anything in this data needs.
 SCHEMA_TYPES = {
@@ -266,7 +276,18 @@ def main() -> None:
 
     stale_from = (end - dt.timedelta(days=args.refresh_days - 1)) if args.refresh_days else start
 
+    # A cache written by an older schema must not be reused.
+    old_version = 0
+    if args.refresh_days and os.path.exists(manifest_path):
+        with open(manifest_path, encoding="utf-8") as fh:
+            old_version = json.load(fh).get("schema_version", 0)
+    if old and old_version != SCHEMA_VERSION:
+        print(f"  published data is schema v{old_version}, this is "
+              f"v{SCHEMA_VERSION} -- rebuilding every file", flush=True)
+        old = {}
+
     manifest: dict = {"start": start.isoformat(), "end": end.isoformat(),
+                      "schema_version": SCHEMA_VERSION,
                       "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(
                           timespec="seconds"),
                       "properties": {}}
@@ -282,7 +303,13 @@ def main() -> None:
             for lo, hi in months_between(start, end):
                 key = f"{lo:%Y-%m}"
                 path_existing = os.path.join(d, f"{key}.parquet")
-                if args.resume and os.path.exists(path_existing):
+                # --resume reuses a file only if it was written by this schema;
+                # otherwise the browser queries columns it does not have.
+                resume_ok = args.resume and os.path.exists(path_existing) and (
+                    grain != "page"
+                    or "leads_first" in pq.read_schema(path_existing).names
+                )
+                if resume_ok:
                     sz = os.path.getsize(path_existing)
                     files.append({"m": key, "rows": pq.read_metadata(path_existing).num_rows,
                                   "bytes": sz})
