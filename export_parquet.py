@@ -51,6 +51,11 @@ GRAINS = {
     "site": ("v_site_daily", []),
     "page": ("v_page_daily", ["page"]),
     "query": ("v_query_daily", ["page", "query", "country", "device"]),
+    # Paid and organic on the same search term. Its own grain because it has
+    # its own metric set and no page dimension -- a search term maps to an ad,
+    # not a URL. Terms bought with no organic presence live under the
+    # "(paid only)" pseudo-property, since they belong to no GSC property.
+    "semseo": ("term_seo_sem_daily", ["term"]),
 }
 
 # Lead channel that lands in the page grain. Organic by default: this is a
@@ -93,6 +98,16 @@ SCHEMA_TYPES = {
     "leads_last": pa.int32(),
     "conv_last": pa.int32(),
     "rev_last": pa.float32(),
+    # SEO vs SEM. Cost is INR, as the source column says -- not the USD the
+    # semroi tables carry, and the two must never be added.
+    "term": pa.string(),
+    "seo_clicks": pa.int32(),
+    "seo_impressions": pa.int32(),
+    "seo_position": pa.float32(),
+    "sem_clicks": pa.int32(),
+    "sem_impressions": pa.int32(),
+    "sem_cost_inr": pa.float32(),
+    "sem_conversions": pa.float32(),
 }
 
 
@@ -123,7 +138,23 @@ def fetch(bq, grain: str, site: str, lo: dt.date, hi: dt.date,
     # DuckDB can skip whole groups from Parquet statistics alone.
     order = ", ".join(dims[:2]) or "date"
 
-    if grain != "page":
+    if grain == "semseo":
+        sql = f"""
+        SELECT date, term,
+               CAST(SUM(seo_clicks) AS INT64) AS seo_clicks,
+               CAST(SUM(seo_impressions) AS INT64) AS seo_impressions,
+               SAFE_DIVIDE(SUM(seo_position * seo_impressions),
+                           SUM(seo_impressions)) AS seo_position,
+               CAST(SUM(sem_clicks) AS INT64) AS sem_clicks,
+               CAST(SUM(sem_impressions) AS INT64) AS sem_impressions,
+               SUM(sem_cost_inr) AS sem_cost_inr,
+               SUM(sem_conversions) AS sem_conversions
+        FROM `{PROJECT}.{DATASET}.term_seo_sem_daily`
+        WHERE site_url = @site AND date BETWEEN '{lo}' AND '{hi}'
+        GROUP BY date, term
+        ORDER BY term
+        """
+    elif grain != "page":
         sql = f"""
         SELECT {select},
                CAST(SUM(clicks) AS INT64) AS clicks,
@@ -261,6 +292,10 @@ def main() -> None:
             f"SELECT DISTINCT site_url FROM `{PROJECT}.{DATASET}.v_page_daily` "
             f"ORDER BY site_url").result()
     ]
+    # Bought-but-not-ranking terms belong to no property, so they need their
+    # own bucket or they would be dropped from the export entirely.
+    if not args.site and args.grain in ("semseo", "all"):
+        sites = sites + ["(paid only)"]
     grains = list(GRAINS) if args.grain == "all" else [args.grain]
 
     print(f"{start} -> {end}  ({args.days} days)  "

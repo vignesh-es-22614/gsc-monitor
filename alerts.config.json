@@ -53,6 +53,17 @@
       "position_min_impressions": 300,
       "max_alerts": 15
     },
+    "theme": {
+      "clicks_drop_pct": 25,
+      "clicks_drop_min_abs": 100,
+      "impressions_drop_pct": 30,
+      "impressions_drop_min_abs": 5000,
+      "position_worsen_by": 2.0,
+      "position_min_impressions": 2000,
+      "max_alerts": 10,
+      "_note": "Thresholds are tighter than page level because a theme aggregates many pages: a 25% fall across a whole content cluster is a bigger signal than 35% on one URL."
+    },
+
     "churn": {
       "window_days": 28,
       "_window_note": "Its own window, longer than the 7-day drop comparison. A query losing every impression is a slower signal: measured on this data, a 7-day window found zero queries that vanished with 10+ prior clicks, while 28 days found 14 missing and 36 new.",

@@ -112,6 +112,26 @@ DIAGNOSIS = {
         "cannibalisation and the wrong page is now eligible. If none appears, "
         "check indexing on the page that used to rank.",
     ),
+    ("themes", "clicks"): (
+        "A whole content cluster losing ground at once, which is rarely one "
+        "page's fault: a core update hitting this topic, a competitor "
+        "publishing across it, or the cluster ageing together.",
+        "The Pages tab filtered to this theme. If the loss is spread evenly "
+        "the topic is losing authority; if one or two pages carry all of it, "
+        "treat those as page-level problems instead.",
+    ),
+    ("themes", "impressions"): (
+        "The theme's pages are matching fewer queries -- lost rankings across "
+        "the cluster, or falling demand for the topic.",
+        "The Queries tab filtered to this theme's pages: whether the queries "
+        "themselves disappeared or merely moved down.",
+    ),
+    ("themes", "position"): (
+        "The cluster is slipping as a group, which points at topical "
+        "authority or a competitor's coverage rather than any single page.",
+        "Whether other themes on the same property held steady. If they did, "
+        "it is this topic; if none did, it is site-wide.",
+    ),
     ("new_queries", "new"): (
         "New or updated content became eligible, a page started matching a new "
         "intent, or a competitor stopped ranking for it.",
@@ -435,6 +455,78 @@ def entity_alerts(bq, cfg, latest: dt.date, n: int, grain: str) -> list[dict]:
     out = []
     for site, items in by_site.items():
         items.sort(key=lambda a: (SEV_ORDER[a["severity"]], -a["lost_clicks"]))
+        out.extend(items[: t["max_alerts"]])
+    return out
+
+
+def theme_alerts(bq, cfg, latest: dt.date, n: int) -> list[dict]:
+    """Movements by content theme, from the Page Themes workbook.
+
+    A theme aggregates many pages, so a theme-level drop means something
+    systematic -- a whole content cluster losing ground -- rather than one
+    page's own problem. That makes it worth its own section: the page-level
+    alerts will be full of individual URLs from the same theme without ever
+    saying they belong together.
+
+    Only themed pages are considered. Coverage is uneven by design (the
+    workbook covers the security and AD products, not ITSM), and alerting on
+    an '(unthemed)' bucket that is 74% of the www root would say nothing.
+    """
+    t = cfg["thresholds"]["theme"]
+    cur_start = latest - dt.timedelta(days=n - 1)
+    prev_start = cur_start - dt.timedelta(days=n)
+
+    sql = f"""
+    SELECT f.site_url, d.theme,
+           SUM(IF(f.date >= '{cur_start}', f.clicks, 0)) c,
+           SUM(IF(f.date <  '{cur_start}', f.clicks, 0)) c0,
+           SUM(IF(f.date >= '{cur_start}', f.impressions, 0)) i,
+           SUM(IF(f.date <  '{cur_start}', f.impressions, 0)) i0,
+           SAFE_DIVIDE(SUM(IF(f.date >= '{cur_start}', f.position*f.impressions, 0)),
+                       SUM(IF(f.date >= '{cur_start}', f.impressions, 0))) p,
+           SAFE_DIVIDE(SUM(IF(f.date <  '{cur_start}', f.position*f.impressions, 0)),
+                       SUM(IF(f.date <  '{cur_start}', f.impressions, 0))) p0
+    FROM {PAGE_TABLE} f
+    JOIN `{PROJECT}.{DATASET}.page_dim` d
+      ON d.site_url = f.site_url AND d.page = f.page
+    WHERE f.date BETWEEN '{prev_start}' AND '{latest}' AND d.is_themed
+    GROUP BY f.site_url, d.theme
+    """
+    by_site: dict[str, list[dict]] = {}
+    for r in bq.query(sql).result():
+        site, theme = r["site_url"], r["theme"]
+        c, c0 = r["c"] or 0, r["c0"] or 0
+        i, i0 = r["i"] or 0, r["i0"] or 0
+        p, p0 = r["p"], r["p0"]
+        hits = []
+
+        d = pct(c, c0)
+        if d is not None and d <= -t["clicks_drop_pct"] and (c0 - c) >= t["clicks_drop_min_abs"]:
+            hits.append(("warning", "clicks", c, c0, d,
+                         f"Clicks {c0:,} -> {c:,} ({d:+.1f}%) across this theme"))
+
+        di = pct(i, i0)
+        if di is not None and di <= -t["impressions_drop_pct"] \
+                and (i0 - i) >= t["impressions_drop_min_abs"]:
+            hits.append(("warning", "impressions", i, i0, di,
+                         f"Impressions {i0:,} -> {i:,} ({di:+.1f}%) across this theme"))
+
+        if p and p0 and (p - p0) >= t["position_worsen_by"] \
+                and i0 >= t["position_min_impressions"]:
+            hits.append(("warning", "position", round(p, 2), round(p0, 2), None,
+                         f"Average position {p0:.1f} -> {p:.1f} across this theme"))
+
+        for sev, metric, cur, prev, delta, msg in hits:
+            by_site.setdefault(site, []).append({
+                "severity": sev, "scope": "theme", "group": "themes",
+                "site_url": site, "entity": theme, "metric": metric,
+                "current": cur, "previous": prev, "delta_pct": delta,
+                "message": msg, "lost_clicks": c0 - c if metric == "clicks" else 0,
+            })
+
+    out = []
+    for site, items in by_site.items():
+        items.sort(key=lambda x: -x["lost_clicks"])
         out.extend(items[: t["max_alerts"]])
     return out
 
@@ -772,6 +864,12 @@ def main() -> None:
     n0 = len(alerts)
     alerts += entity_alerts(bq, cfg, latest, n, "page")
     print(f"  page:     {len(alerts) - n0}")
+    n0 = len(alerts)
+    try:
+        alerts += theme_alerts(bq, cfg, latest, n)
+        print(f"  theme:    {len(alerts) - n0}")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  theme:    skipped ({str(exc).splitlines()[0][:90]})")
     n0 = len(alerts)
     try:
         alerts += entity_alerts(bq, cfg, latest, n, "query")

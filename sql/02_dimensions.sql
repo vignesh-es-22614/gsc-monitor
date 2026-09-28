@@ -154,3 +154,65 @@ WHERE date IS NOT NULL;
 CREATE OR REPLACE TABLE `it-security-online-marketing.gsc_data.page_dim`
 CLUSTER BY site_url, page AS
 SELECT * FROM `it-security-online-marketing.gsc_data.v_page_dim`;
+
+-- --------------------------------------------------------------------------
+-- The same search term, bought and earned.
+--
+-- Paid search terms and organic queries are the one place the two channels
+-- meet on identical keys, which makes them directly comparable: 31,473 terms
+-- overlap in a 28-day window, carrying Rs 27.9M of spend against 54,452
+-- organic clicks.
+--
+-- Deliberately a FULL OUTER JOIN. The interesting rows are the ones that
+-- exist on one side only: a term with spend and no organic presence is a gap
+-- in the content, and a term ranking organically with spend on top may be
+-- paying for a click already being earned. An inner join would hide both.
+--
+-- Cost is INR -- the source column is cost_inr, and this is not the USD figure
+-- the semroi tables carry. Do not add the two.
+--
+-- SEM has no page dimension here (a search term maps to an ad, not a URL), so
+-- this table is term-grained only and never joins to page-level facts.
+-- --------------------------------------------------------------------------
+CREATE OR REPLACE TABLE `it-security-online-marketing.gsc_data.term_seo_sem_daily`
+PARTITION BY date
+CLUSTER BY site_url, term AS
+WITH sem AS (
+  SELECT date,
+         LOWER(TRIM(search_term)) AS term,
+         SUM(impressions) AS sem_impressions,
+         SUM(clicks) AS sem_clicks,
+         SUM(cost_inr) AS sem_cost_inr,
+         SUM(conversions) AS sem_conversions
+  FROM `it-security-online-marketing.Google_ads_data_ajay.v_search_terms_all_engines`
+  WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL 400 DAY)
+    AND search_term IS NOT NULL AND TRIM(search_term) != ''
+  GROUP BY date, term
+),
+seo AS (
+  SELECT date, site_url,
+         LOWER(TRIM(query)) AS term,
+         SUM(impressions) AS seo_impressions,
+         SUM(clicks) AS seo_clicks,
+         SAFE_DIVIDE(SUM(position * impressions), SUM(impressions)) AS seo_position
+  FROM `it-security-online-marketing.gsc_data.v_query_daily`
+  WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL 400 DAY)
+    AND query IS NOT NULL AND TRIM(query) != ''
+  GROUP BY date, site_url, term
+)
+SELECT
+  IFNULL(seo.date, sem.date) AS date,
+  -- A paid-only term belongs to no Search Console property, so it lands in a
+  -- bucket of its own rather than being silently attributed to one.
+  IFNULL(seo.site_url, '(paid only)') AS site_url,
+  IFNULL(seo.term, sem.term) AS term,
+  IFNULL(seo.seo_clicks, 0) AS seo_clicks,
+  IFNULL(seo.seo_impressions, 0) AS seo_impressions,
+  seo.seo_position,
+  IFNULL(sem.sem_clicks, 0) AS sem_clicks,
+  IFNULL(sem.sem_impressions, 0) AS sem_impressions,
+  IFNULL(sem.sem_cost_inr, 0) AS sem_cost_inr,
+  IFNULL(sem.sem_conversions, 0) AS sem_conversions
+FROM seo
+FULL OUTER JOIN sem
+  ON sem.date = seo.date AND sem.term = seo.term;

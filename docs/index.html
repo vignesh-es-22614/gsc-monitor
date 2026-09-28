@@ -163,6 +163,22 @@ input::placeholder{color:var(--muted)}
 .alert .why{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5;
   max-width:88ch}
 .alert .why b{color:var(--ink-2);font-weight:600;margin-right:5px}
+/* Alerts as a table. The prose columns carry most of the value, so they get
+   most of the width; nothing is nowrap because these wrap by design. */
+.alerttbl th,.alerttbl td{white-space:normal;vertical-align:top;
+  border-bottom:1px solid var(--border)}
+.alerttbl td:first-child{width:112px;white-space:nowrap}
+.alerttbl td:nth-child(2){width:30%;max-width:none}
+.alerttbl td.why{width:26%;font-size:11.5px;color:var(--muted);line-height:1.5}
+.alerttbl .msg{font-size:12px;color:var(--ink-2);margin-top:3px;font-weight:400}
+.alerttbl .prop{font-size:10.5px;color:var(--muted);margin-top:3px}
+/* SEO vs SEM: the comment is the widest column because it is the conclusion. */
+.sstbl td,.sstbl th{vertical-align:top}
+.sstbl td.ent{max-width:260px;white-space:normal;word-break:break-word}
+.sstbl td.why{white-space:normal;width:38%;font-size:11.5px;color:var(--muted);
+  line-height:1.5}
+.sstbl td.why b{text-transform:uppercase;font-size:10px;letter-spacing:.04em;
+  margin-right:5px}
 
 /* ------------------------------------------------------------- explore */
 .exgrid{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
@@ -439,6 +455,7 @@ function renderPropList(){
     }).join('');
   el.onclick = ev => {
     const b = ev.target.closest('button[data-slug]'); if(!b) return;
+    SS.res = null; SS.err = null;   // the comparison is per property
     S.prop = b.dataset.slug === '__all__' ? null : b.dataset.slug;
     S.openPage = null; S.shown = 300; render();
   };
@@ -567,6 +584,7 @@ function propView(){
       <button data-tab="themes" aria-selected="${S.tab==='themes'}">Themes</button>
       <button data-tab="country" aria-selected="${S.tab==='country'}">Countries</button>
       <button data-tab="device" aria-selected="${S.tab==='device'}">Devices</button>
+      <button data-tab="semseo" aria-selected="${S.tab==='semseo'}">SEO vs SEM</button>
       <button data-tab="reports" aria-selected="${S.tab==='reports'}">Reports</button>
       <button data-tab="alerts" aria-selected="${S.tab==='alerts'}">Alerts</button>
     </div>
@@ -592,6 +610,50 @@ function tabDim(tab){
   const c = DIM_TABS[tab];
   return c.dim || (c.choices.includes(Q.themeDim) ? Q.themeDim : c.choices[0]);
 }
+
+// Search Console reports countries as ISO-3166 alpha-3, lowercased. Nobody
+// reads "zaf" as South Africa, so the code is translated for display and kept
+// as the value everywhere it is filtered or exported.
+const COUNTRY_NAMES = {
+  usa:'United States', ind:'India', gbr:'United Kingdom', aus:'Australia',
+  can:'Canada', deu:'Germany', fra:'France', ita:'Italy', esp:'Spain',
+  nld:'Netherlands', bra:'Brazil', mex:'Mexico', jpn:'Japan', chn:'China',
+  kor:'South Korea', rus:'Russia', zaf:'South Africa', are:'UAE',
+  sau:'Saudi Arabia', tur:'Turkey', idn:'Indonesia', mys:'Malaysia',
+  sgp:'Singapore', phl:'Philippines', tha:'Thailand', vnm:'Vietnam',
+  pak:'Pakistan', bgd:'Bangladesh', lka:'Sri Lanka', npl:'Nepal',
+  irn:'Iran', irq:'Iraq', isr:'Israel', egy:'Egypt', nga:'Nigeria',
+  ken:'Kenya', gha:'Ghana', mar:'Morocco', dza:'Algeria', tun:'Tunisia',
+  eth:'Ethiopia', tza:'Tanzania', uga:'Uganda', zwe:'Zimbabwe',
+  pol:'Poland', swe:'Sweden', nor:'Norway', dnk:'Denmark', fin:'Finland',
+  che:'Switzerland', aut:'Austria', bel:'Belgium', irl:'Ireland',
+  prt:'Portugal', grc:'Greece', cze:'Czechia', hun:'Hungary', rou:'Romania',
+  bgr:'Bulgaria', svk:'Slovakia', svn:'Slovenia', hrv:'Croatia',
+  srb:'Serbia', ukr:'Ukraine', blr:'Belarus', ltu:'Lithuania',
+  lva:'Latvia', est:'Estonia', alb:'Albania', mkd:'North Macedonia',
+  bih:'Bosnia & Herzegovina', mlt:'Malta', cyp:'Cyprus', isl:'Iceland',
+  lux:'Luxembourg', nzl:'New Zealand', arg:'Argentina', chl:'Chile',
+  col:'Colombia', per:'Peru', ven:'Venezuela', ecu:'Ecuador',
+  ury:'Uruguay', pry:'Paraguay', bol:'Bolivia', cri:'Costa Rica',
+  pan:'Panama', gtm:'Guatemala', dom:'Dominican Republic', hnd:'Honduras',
+  slv:'El Salvador', nic:'Nicaragua', jam:'Jamaica', tto:'Trinidad & Tobago',
+  hkg:'Hong Kong', twn:'Taiwan', mac:'Macao', mng:'Mongolia',
+  kaz:'Kazakhstan', uzb:'Uzbekistan', aze:'Azerbaijan', geo:'Georgia',
+  arm:'Armenia', jor:'Jordan', lbn:'Lebanon', kwt:'Kuwait', qat:'Qatar',
+  bhr:'Bahrain', omn:'Oman', yem:'Yemen', syr:'Syria', afg:'Afghanistan',
+  mmr:'Myanmar', khm:'Cambodia', lao:'Laos', brn:'Brunei', mdv:'Maldives',
+  btn:'Bhutan', fji:'Fiji', png:'Papua New Guinea', sen:'Senegal',
+  civ:'Côte d’Ivoire', cmr:'Cameroon', zmb:'Zambia', bwa:'Botswana',
+  nam:'Namibia', moz:'Mozambique', mwi:'Malawi', rwa:'Rwanda',
+  sdn:'Sudan', lby:'Libya', ago:'Angola', cod:'DR Congo',
+  mda:'Moldova', mne:'Montenegro', zzz:'Unknown region',
+};
+const countryName = c => {
+  const k = String(c || '').toLowerCase();
+  // Unmapped codes stay as the uppercased code rather than becoming blank --
+  // Search Console has 240 of them and the long tail is genuinely obscure.
+  return COUNTRY_NAMES[k] || k.toUpperCase();
+};
 
 const PERIODS = {
   weekly:     'Weekly',
@@ -627,12 +689,16 @@ function qDefaults(){
 
 async function qBoot(){
   if(Q.ready) return;
-  // Version the module URL with the build timestamp. A plain import('./sql.js')
-  // is served from the HTTP cache, so a deploy that changes the query layer
-  // would keep running the previous one against the new page -- which fails in
-  // confusing ways rather than loudly.
-  SQLMOD = SQLMOD || await import(
-    './sql.js?v=' + encodeURIComponent(S.summary.generated_at || Date.now()));
+  // Version the module URL. A plain import('./sql.js') comes from the HTTP
+  // cache, so a deploy that changed the query layer would keep running the
+  // previous one against the new page -- failing confusingly rather than
+  // loudly. In production the build timestamp is the right key: the payload
+  // and the code ship together. On localhost it is the wrong key, because the
+  // file changes constantly while the payload does not, so dev gets a fresh
+  // module every load instead of a stale one that costs a debugging cycle.
+  const dev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+  const ver = dev ? Date.now() : (S.summary.generated_at || Date.now());
+  SQLMOD = SQLMOD || await import('./sql.js?v=' + encodeURIComponent(ver));
   await SQLMOD.boot(s=>{ Q.status=s; const n=$('#q_status'); if(n) n.textContent=s; });
   Q.ready = true;
 }
@@ -670,18 +736,20 @@ async function qRun(force){
       return;
     }
     Q.trend = null;
-    const [tot, g, series] = await Promise.all([
-      SQLMOD.totals(slug, f, [dim]),
-      SQLMOD.group(slug, f, [dim], Q.limit || null, Q.minClicks),
-      SQLMOD.daily(slug, f, [dim]),
-    ]);
+    // One round trip for the table, the chart and the tiles.
+    const g = await SQLMOD.tabData(slug, f, dim, Q.limit || null, Q.minClicks);
+    Q.res = {tot:g.tot, rows:g.rows, grain:g.grain, exact:g.exact,
+             series:g.series,
+             bytes: SQLMOD.bytesFor(g.grain, slug, f.from, f.to)};
+    Q.ran = key; Q.ranCtx = ctx;
+    repaintTab();   // show the table before the facet lists are fetched
+
+    // Facet values are only needed to populate the filter chips, so they come
+    // after the answer is on screen rather than delaying it.
     if(!Q.opts.countries.length){
       Q.opts.countries = await SQLMOD.distinct(slug, f, 'country');
       Q.opts.devices   = await SQLMOD.distinct(slug, f, 'device');
     }
-    Q.res = {tot, rows:g.rows, grain:g.grain, exact:g.exact, series,
-             bytes: SQLMOD.bytesFor(g.grain, slug, f.from, f.to)};
-    Q.ran = key; Q.ranCtx = ctx;
   }catch(e){ Q.err = e.message || String(e); Q.res = null; Q.ran = null; Q.ranCtx = null; }
   finally{
     Q.busy = false;
@@ -699,6 +767,7 @@ function resOk(r){
 function repaintTab(){
   const tb = $('#tabbody');
   if(tb && DIM_TABS[S.tab]) renderDataTab(tb);
+  else if(tb && S.tab==='semseo')  renderSemSeo(tb);
   else if(tb && S.tab==='reports') renderReports(tb);
 }
 
@@ -719,7 +788,10 @@ function filterBar(){
 
   const cs = Q.countrySearch.toLowerCase();
   let countries = Q.opts.countries;
-  if(cs) countries = countries.filter(c=>c.k.toLowerCase().includes(cs));
+  // Search either spelling: someone looking for South Africa should not have
+  // to know it is "zaf".
+  if(cs) countries = countries.filter(c =>
+    c.k.toLowerCase().includes(cs) || countryName(c.k).toLowerCase().includes(cs));
   const shown = Q.showAllCountries ? countries : countries.slice(0,24);
 
   return `<div class="card" style="margin-bottom:14px">
@@ -796,12 +868,13 @@ function filterBar(){
             placeholder="search ${Q.opts.countries.length} countries…"
             style="max-width:210px;flex:0 0 auto">
           ${shown.map(o=>`<button class="chip${f.countries.includes(o.k)?' on':''}"
-              data-dim="countries" data-val="${esc(o.k)}">${esc(o.k)}
+              data-dim="countries" data-val="${esc(o.k)}" title="${esc(o.k)}">${esc(countryName(o.k))}
               <span>${fmt(o.clicks)}</span></button>`).join('')}
           ${countries.length>shown.length
             ? `<button class="iconbtn sm" id="q_morec">+${countries.length-shown.length} more</button>` : ''}
           ${f.countries.filter(c=>!shown.some(s=>s.k===c)).map(c=>
-            `<button class="chip on" data-dim="countries" data-val="${esc(c)}">${esc(c)}</button>`).join('')}`
+            `<button class="chip on" data-dim="countries" data-val="${esc(c)}"
+              title="${esc(c)}">${esc(countryName(c))}</button>`).join('')}`
           : '<span style="color:var(--muted);font-size:12px">press Apply to load</span>'}
       </div>
     </div>
@@ -875,8 +948,11 @@ function renderDataTab(tb){
   qDefaults();
   const cfg = DIM_TABS[S.tab], r = Q.res;
   const dim = tabDim(S.tab);
+  // Display name, code kept in the tooltip and in every filter and export --
+  // the code is the join key, the name is only for reading.
   const label = k => dim==='page'
-    ? (String(k).replace(S.propData.site_url,'') || '/') : k;
+    ? (String(k).replace(S.propData.site_url,'') || '/')
+    : dim==='country' ? countryName(k) : k;
 
   // Which body gets rendered decides what elements exist afterwards. The old
   // result stays in Q.res while a new query runs, so "have a result" is not
@@ -1008,9 +1084,12 @@ function downloadRows(rows, name){
   const list = Array.isArray(rows) ? rows : (Q.res?.rows || []);
   if(!list.length) return;
   const dims = Array.isArray(rows) ? (REP.dims) : [DIM_TABS[S.tab].dim];
-  const head = [...dims,'clicks','impressions','ctr','position',
+  const withName = dims.includes('country');
+  const head = [...dims, ...(withName?['country_name']:[]),
+                'clicks','impressions','ctr','position',
                 'leads','conversions','revenue'];
-  const body = list.map(r=>[...dims.map(d=>r[d]), r.clicks, r.impressions,
+  const body = list.map(r=>[...dims.map(d=>r[d]),
+    ...(withName?[countryName(r.country)]:[]), r.clicks, r.impressions,
     r.ctr==null?'':r.ctr, r.position==null?'':r.position,
     r.leads??'', r.conversions??'', r.revenue??''].map(csvCell).join(','));
   // Leading BOM, written as an escape rather than an invisible character, so
@@ -1094,7 +1173,8 @@ function trendTable(t){
   const metrics = Q.metrics.filter(m =>
     t.exact || !['leads','conversions','revenue'].includes(m));
   const label = k => t.dim==='page'
-    ? (String(k).replace(S.propData.site_url,'') || '/') : k;
+    ? (String(k).replace(S.propData.site_url,'') || '/')
+    : t.dim==='country' ? countryName(k) : k;
 
   return `<div class="card">
     <h2>${esc(t.dim.replace('_',' '))} by ${esc(PERIODS[t.period].toLowerCase())}
@@ -1118,6 +1198,199 @@ function trendTable(t){
     <p class="caveat">Ranked by total clicks across the whole range, so the same
     rows appear in every period rather than a different top-N per column.</p>
     <div style="height:12px"></div></div>`;
+}
+
+// ========================================================= seo vs sem ===
+// Paid and organic on the same search term -- the one key the two channels
+// share. The Comment column is the point of the tab: it says which channel is
+// doing the work and what the row implies.
+const SS = {busy:false, err:null, res:null, bucket:'both', sort:'sem_cost_inr', ran:null};
+const inr = v => v==null ? '–'
+  : v >= 1e7 ? '₹' + (v/1e7).toFixed(2) + ' Cr'
+  : v >= 1e5 ? '₹' + (v/1e5).toFixed(2) + ' L'
+  : '₹' + Math.round(v).toLocaleString('en-IN');
+
+/**
+ * What this row means and what to do. Derived, not stored: the numbers say
+ * which channel is carrying the term, and the useful reading is usually a
+ * comparison rather than either column alone.
+ */
+function ssComment(r){
+  const seoC = r.seo_clicks||0, semC = r.sem_clicks||0;
+  const cost = r.sem_cost_inr||0, pos = r.seo_position;
+  const cpc = semC ? cost/semC : null;
+
+  if(!r.seo_impressions && semC)
+    return ['gap', `Buying it, not ranking for it. No organic impressions at all, so
+      ${inr(cost)} is the only way you appear. A page targeting this term would
+      start earning the click instead of renting it.`];
+  if(!semC && seoC)
+    return ['earned', `Earned free — ${fmt(seoC)} clicks at position ${fmt1(pos)},
+      no spend. Worth knowing as exposure: if this ranking slips there is no
+      paid cover behind it.`];
+  if(pos != null && pos <= 3 && cost > 0)
+    return ['overlap', `Already ranking ${fmt1(pos)} and still paying ${inr(cost)}.
+      Paid and organic overlap hardest in the top three, where the organic
+      click was likely available anyway. Test pausing and watch total clicks,
+      not paid clicks.`];
+  if(pos != null && pos > 10 && semC)
+    return ['defend', `Organic is weak here (position ${fmt1(pos)}), so the
+      ${inr(cost)} is buying visibility you do not otherwise have. Keep it and
+      improve the page — this is paid doing its job.`];
+  if(semC > seoC * 3 && seoC)
+    return ['lean-paid', `Paid carries this term ${fmt(semC)} clicks to ${fmt(seoC)}
+      organic${cpc?` at about ${inr(cpc)} a click`:''}. Improving the organic
+      position is the cheaper route to the same traffic.`];
+  if(seoC > semC * 3 && semC)
+    return ['lean-seo', `Organic already does the work — ${fmt(seoC)} clicks against
+      ${fmt(semC)} paid. The spend adds little; shift it to terms with no
+      organic presence.`];
+  return ['mixed', `Both channels contribute at similar scale. Judge it on cost
+    per conversion rather than clicks.`];
+}
+const SS_TAG = {
+  gap:'var(--serious)', earned:'var(--good)', overlap:'var(--critical)',
+  defend:'var(--s1)', 'lean-paid':'var(--serious)', 'lean-seo':'var(--s3)',
+  mixed:'var(--muted)',
+};
+
+async function ssRun(){
+  if(SS.busy) return;
+  const key = JSON.stringify([S.prop, Q.f, SS.bucket, SS.sort]);
+  SS.busy = true; SS.err = null; repaintTab();
+  try{
+    await qBoot();
+    SS.res = await SQLMOD.semseo(S.prop, Q.f, SS.bucket, Q.limit || 500, SS.sort);
+    SS.ran = key;
+  }catch(e){ SS.err = e.message || String(e); SS.res = null; }
+  finally{ SS.busy = false; repaintTab(); }
+}
+
+function ssCSV(){
+  const rows = SS.res?.rows || []; if(!rows.length) return;
+  const head = ['term','seo_clicks','seo_impressions','seo_position',
+                'sem_clicks','sem_impressions','sem_cost_inr','sem_conversions',
+                'verdict','comment'];
+  const body = rows.map(r=>{
+    const [tag, text] = ssComment(r);
+    return [r.term, r.seo_clicks, r.seo_impressions, r.seo_position ?? '',
+      r.sem_clicks, r.sem_impressions, r.sem_cost_inr, r.sem_conversions,
+      tag, text.replace(/\s+/g,' ').trim()].map(csvCell).join(',');
+  });
+  const blob = new Blob(['﻿'+head.join(',')+'\n'+body.join('\n')],
+    {type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = `gsc_seo_vs_sem_${S.propData.label.replace(/[^a-z0-9]+/gi,'-')}_${SS.bucket}_${Q.f.from}_${Q.f.to}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },0);
+}
+
+function renderSemSeo(tb){
+  if(!tb) return;
+  qDefaults();
+  const BUCKETS = {
+    both:    ['Ranking &amp; buying', 'terms with organic and paid presence'],
+    paid:    ['Paid only', 'spend with no organic presence — content gaps'],
+    organic: ['Organic only', 'ranking with no spend'],
+  };
+  const r = SS.res;
+
+  const controls = `<div class="card" style="margin-bottom:14px">
+    <h2>SEO vs SEM <span class="note">the same search term, earned and bought.
+      Spend is INR, from the ads search-terms report</span></h2>
+    <div class="body">
+      <div class="facet"><b>Show</b>
+        ${Object.entries(BUCKETS).map(([k,[t,d]])=>`<button class="chip${SS.bucket===k?' on':''}"
+          data-bucket="${k}" title="${d}">${t}</button>`).join('')}
+      </div>
+      <div class="exgrid" style="margin-top:10px">
+        <label>Sort by<select id="ss_sort">
+          ${[['sem_cost_inr','Spend'],['sem_clicks','Paid clicks'],
+             ['seo_clicks','Organic clicks'],['sem_conversions','Paid conversions'],
+             ['seo_impressions','Organic impressions']].map(([k,v])=>
+            `<option value="${k}" ${SS.sort===k?'selected':''}>${v}</option>`).join('')}
+        </select></label>
+        <label>&nbsp;<button class="iconbtn primary" id="ss_run">${SS.busy?'Running…':'Apply'}</button></label>
+      </div>
+    </div>
+  </div>`;
+
+  let body;
+  if(SS.err){
+    body = `<div class="card"><div class="empty">
+      <b style="color:var(--critical)">Query failed.</b><br>${esc(SS.err)}</div></div>`;
+  }else if(SS.busy){
+    body = `<div class="card"><div class="spinner" id="q_status">${esc(Q.status||'Comparing channels…')}</div></div>`;
+  }else if(!r){
+    body = `<div class="card"><div class="empty">Press <b>Apply</b>.</div></div>`;
+  }else if(r.missing){
+    body = `<div class="card"><div class="empty">
+      No paid/organic data published for this property and range yet. Re-run
+      the workflow so the Parquet export includes the SEO-vs-SEM grain.</div></div>`;
+  }else if(!r.rows.length){
+    body = `<div class="card"><div class="empty">
+      No terms in this bucket for the selected range.</div></div>`;
+  }else{
+    const t = r.tot;
+    body = `<div class="tiles">
+      <div class="tile"><div class="k">Spend</div><div class="v">${inr(t.sem_cost_inr)}</div>
+        <div class="d">${esc(Q.f.from)} → ${esc(Q.f.to)}</div></div>
+      <div class="tile"><div class="k">Paid clicks</div><div class="v">${fmt(t.sem_clicks)}</div>
+        <div class="d">${t.sem_clicks?inr(t.sem_cost_inr/t.sem_clicks)+' per click':''}</div></div>
+      <div class="tile"><div class="k">Organic clicks</div><div class="v">${fmt(t.seo_clicks)}</div>
+        <div class="d">free</div></div>
+      <div class="tile"><div class="k">Paid conversions</div><div class="v">${fmt(Math.round(t.sem_conversions))}</div>
+        <div class="d">${t.sem_conversions?inr(t.sem_cost_inr/t.sem_conversions)+' each':''}</div></div>
+      <div class="tile"><div class="k">Terms</div><div class="v">${fmt(r.rows.length)}</div>
+        <div class="d">${esc(BUCKETS[SS.bucket][0].replace('&amp;','&'))}</div></div>
+    </div>
+    <div class="card">
+      <h2>Search terms <span class="note">${esc(BUCKETS[SS.bucket][1])}</span>
+        <span style="margin-left:auto"><button class="iconbtn" id="ss_dl">↓ CSV · ${fmt(r.rows.length)} rows</button></span></h2>
+      <div class="tablewrap"><table class="sstbl"><thead>
+        <tr><th rowspan="2" style="vertical-align:bottom">Query</th>
+          <th class="num mgroup" colspan="4">SEM (paid)</th>
+          <th class="num mgroup" colspan="3">SEO (organic)</th>
+          <th rowspan="2" style="vertical-align:bottom" class="mgroup">Comment</th></tr>
+        <tr><th class="num mgroup">Spend</th><th class="num">Clicks</th>
+          <th class="num">Impr</th><th class="num">Conv</th>
+          <th class="num mgroup">Clicks</th><th class="num">Impr</th>
+          <th class="num">Pos</th></tr>
+      </thead><tbody>` +
+      r.rows.slice(0,400).map(x=>{
+        const [tag, text] = ssComment(x);
+        return `<tr>
+          <td class="ent" title="${esc(x.term)}">${esc(x.term)}</td>
+          <td class="num mgroup">${inr(x.sem_cost_inr)}</td>
+          <td class="num">${fmt(x.sem_clicks)}</td>
+          <td class="num">${fmt(x.sem_impressions)}</td>
+          <td class="num">${x.sem_conversions?fmt1(x.sem_conversions):'–'}</td>
+          <td class="num mgroup">${fmt(x.seo_clicks)}</td>
+          <td class="num">${fmt(x.seo_impressions)}</td>
+          <td class="num">${fmt1(x.seo_position)}</td>
+          <td class="why mgroup"><b style="color:${SS_TAG[tag]}">${tag}</b> ${esc(text.replace(/\s+/g,' ').trim())}</td>
+        </tr>`;
+      }).join('') +
+      `</tbody></table></div>
+      ${r.rows.length>400?`<div style="padding:11px;text-align:center;color:var(--muted);font-size:12px">
+        400 of ${fmt(r.rows.length)} shown · CSV has all of them</div>`:''}
+      <p class="caveat">Organic figures come from the query grain, which Search
+      Console strips of anonymised queries, so organic clicks here understate
+      reality — the paid side is complete. Spend is INR and is not the USD
+      figure the semroi tables carry; never add the two.</p>
+      <div style="height:12px"></div></div>`;
+  }
+
+  tb.innerHTML = controls + filterBar() + body;
+  wireFilterBar(tb);
+  const on=(id,fn,ev='onclick')=>{const el=tb.querySelector('#'+id); if(el) el[ev]=fn;};
+  on('ss_run', ssRun);
+  on('ss_dl', ssCSV);
+  on('ss_sort', e=>{ SS.sort = e.target.value; }, 'onchange');
+  tb.querySelectorAll('.chip[data-bucket]').forEach(c=>c.onclick=()=>{
+    SS.bucket = c.dataset.bucket; ssRun();
+  });
+  if(!SS.res && !SS.busy && !SS.err) ssRun();
 }
 
 // ============================================================= reports ===
@@ -1309,39 +1582,51 @@ function alertsView(scopeSite){
     <div class="empty">Nothing breached a threshold${scopeSite?' for this property':''}
     over the last ${a.compare_days} days.</div></div>`;
 
-  const icon = {critical:'▲', warning:'◆', info:'●'};
-  // Ordered by what someone acts on first: a broken pipeline makes everything
-  // below it meaningless, then losses, then slipping position, then gains.
-  const groups = {
-    pipeline:        ['Pipeline health', 'Did the data even load'],
-    property:        ['Property level', 'Whole-property clicks and impressions'],
-    pages:           ['Pages — clicks &amp; impressions', 'Page-wise drops'],
-    queries:         ['Queries — clicks &amp; impressions', 'Query-wise drops'],
-    missing_queries: ['Missing queries', 'Ranked before, no impressions at all now'],
-    position:        ['Position tracker', 'Slipped down the results, at every level'],
-    new_queries:     ['New queries', 'Appeared from nothing — usually new content landing'],
+  const icon = {critical:'\u25b2', warning:'\u25c6', info:'\u25cf'};
+  // Ordered by what gets acted on first. A broken pipeline makes everything
+  // under it meaningless; gains are read last.
+  const LEVELS = [
+    ['pipeline',        'Pipeline level',  'Did the data load at all'],
+    ['property',        'Property level',  'Whole-property movements'],
+    ['pages',           'Page level',      'Clicks and impressions per page'],
+    ['queries',         'Queries level',   'Clicks and impressions per query'],
+    ['missing_queries', 'Missing queries', 'Ranked before, no impressions now'],
+    ['position',        'Position level',  'Slipped down the results'],
+    ['themes',          'Theme level',     'Movements by content theme'],
+    ['new_queries',     'New queries',     'Appeared from nothing'],
+  ];
+
+  const cell = x => {
+    let ent = String(x.entity);
+    if(x.scope==='page') ent = ent.replace(x.site_url,'') || '/';
+    return ent;
   };
-  let out='';
-  for(const [scope,[title,blurb]] of Object.entries(groups)){
-    const items = list.filter(x=>(x.group||x.scope)===scope);
+
+  let out = `<div class="banner"><span>\u2699</span><div>Thresholds live in
+    <b>alerts.config.json</b> in the repo \u2014 there is no server to save
+    settings to. Current window: last <b>${a.compare_days} days</b> vs the
+    ${a.compare_days} before. Root causes are starting points; the solution
+    column says what would confirm or rule each one out.</div></div>`;
+
+  for(const [key, title, blurb] of LEVELS){
+    const items = list.filter(x=>(x.group||x.scope)===key);
     if(!items.length) continue;
-    out += `<div class="card" style="margin-bottom:12px"><h2>${title}
-      <span class="note">${blurb} · ${items.length}</span></h2>` +
-      items.map(x=>{
-        let ent = String(x.entity);
-        if(x.scope==='page') ent = ent.replace(x.site_url,'') || '/';
-        return `<div class="alert">
-          <span class="sev ${x.severity}">${icon[x.severity]} ${x.severity.toUpperCase()}</span>
-          <div><div class="ent">${esc(ent)}</div>
-            <div class="msg">${esc(x.message)}</div>
-            ${x.cause?`<div class="why"><b>Likely cause</b> ${esc(x.cause)}</div>`:''}
-            ${x.check?`<div class="why"><b>Check first</b> ${esc(x.check)}</div>`:''}
-            ${scopeSite?'':`<div class="prop">${esc(x.site_url)}</div>`}</div></div>`;
-      }).join('') + `</div>`;
+    out += `<div class="card" style="margin-bottom:12px">
+      <h2>${title} <span class="note">${blurb} \u00b7 ${items.length}</span></h2>
+      <div class="tablewrap"><table class="alerttbl"><thead><tr>
+        <th>Category</th><th>Problem</th><th>Root cause</th><th>Solution</th>
+      </tr></thead><tbody>` +
+      items.map(x=>`<tr>
+        <td><span class="sev ${x.severity}">${icon[x.severity]} ${x.severity.toUpperCase()}</span>
+          ${scopeSite?'':`<div class="prop">${esc(x.site_url.replace('https://www.manageengine.com/','').replace('https://','')||'root')}</div>`}</td>
+        <td class="ent" title="${esc(x.entity)}"><b>${esc(cell(x))}</b>
+          <div class="msg">${esc(x.message)}</div></td>
+        <td class="why">${esc(x.cause||'\u2014')}</td>
+        <td class="why">${esc(x.check||'\u2014')}</td>
+      </tr>`).join('') +
+      `</tbody></table></div></div>`;
   }
-  return `<div class="banner"><span>⚙</span><div>Thresholds live in
-    <b>alerts.config.json</b> in the repo — there is no server to save settings to.
-    Current window: last <b>${a.compare_days} days</b> vs the ${a.compare_days} before.</div></div>` + out;
+  return out;
 }
 
 // ================================================================ paint ===
@@ -1394,6 +1679,7 @@ function render(){
   // --- tab body ----------------------------------------------------------
   const tb=$('#tabbody');
   if(DIM_TABS[S.tab])        renderDataTab(tb);
+  else if(S.tab==='semseo')  renderSemSeo(tb);
   else if(S.tab==='reports') renderReports(tb);
   else                       tb.innerHTML = alertsView(S.propData.site_url);
 
@@ -1489,6 +1775,11 @@ function initTheme(){
   alertBanner();
   renderPropList();
   render();
+
+  // Start the ~3 MB engine download now, in the background. By the time a tab
+  // is clicked it is usually already resident, which is most of what "Loading
+  // data index…" was waiting on.
+  setTimeout(()=>{ qBoot().catch(()=>{}); }, 0);
 })();
 </script>
 </body>

@@ -40,10 +40,25 @@ export async function boot(onStatus = () => {}) {
     URL.revokeObjectURL(workerUrl);
     _conn = await _db.connect();
 
+    // Every query reads Parquet over HTTP, so the round trips dominate, not
+    // the scan. Caching the footer and metadata means a second query against
+    // the same month does not re-fetch them, and keep-alive stops each range
+    // request paying for a new TLS handshake. Wrapped because an option name
+    // that a future DuckDB drops must not take the whole dashboard down.
+    for (const pragma of [
+      "SET enable_http_metadata_cache=true",
+      "SET enable_object_cache=true",
+      "SET http_keep_alive=true",
+      "SET http_timeout=30000",
+    ]) {
+      try { await _conn.query(pragma); } catch (e) { /* option not supported */ }
+    }
+
     onStatus('Loading data index…');
     const r = await fetch('data/pq/manifest.json', { cache: 'no-cache' });
     if (!r.ok) throw new Error(`manifest.json ${r.status} — run export_parquet.py`);
     _manifest = await r.json();
+    onStatus('Ready');
     return _conn;
   })();
   return _booting;
@@ -142,6 +157,9 @@ function metrics(grain, attribution = 'first', hasLeads = true) {
  * selecting leads_first from it fails the whole query. Probing costs one
  * footer read and is cached per file set.
  */
+// Schema version at which the page grain gained the theme and CRM columns.
+const SCHEMA_WITH_EXTRAS = 2;
+
 const COLS_CACHE = new Map();
 async function columnsOf(src, key) {
   if (COLS_CACHE.has(key)) return COLS_CACHE.get(key);
@@ -156,10 +174,24 @@ async function columnsOf(src, key) {
   return set;
 }
 
-/** Capability probe for one (grain, property, range). */
+/**
+ * What one (grain, property, range) can answer.
+ *
+ * Read from the manifest's schema_version when it has one -- a DESCRIBE is a
+ * whole extra network round trip per query, and on a static host over HTTP
+ * that is most of the time a small query takes. Only data published before
+ * the version stamp existed gets probed, and then once per file set.
+ */
 async function caps(grain, slug, f) {
   const src = source(grain, slug, f);
   if (!src) return { src: null, hasLeads: false, hasThemes: false };
+
+  const v = _manifest?.schema_version;
+  if (typeof v === 'number') {
+    const ok = grain === 'page' && v >= SCHEMA_WITH_EXTRAS;
+    return { src, hasLeads: ok, hasThemes: ok };
+  }
+
   const cols = await columnsOf(src, `${grain}|${slug}|${f.from}|${f.to}`);
   return {
     src,
@@ -311,6 +343,142 @@ export async function drill(slug, f, dim, value, into, limit = 10) {
     LIMIT ${limit}`);
 }
 
+/**
+ * Everything one data tab needs, in a single round trip.
+ *
+ * The tab used to issue three queries -- totals, the grouped rows, the daily
+ * series -- and each one re-opened the same Parquet files over HTTP. On a
+ * static host the latency of those round trips is most of the wait, so they
+ * are one statement now, with the grouped rows and the series separated by a
+ * marker column. Totals come from summing the groups rather than a third
+ * scan, which is exact because the grouping partitions the same rows.
+ */
+export async function tabData(slug, f, dim, limit = null, minClicks = 0) {
+  const grain = grainFor([dim], f);
+  const { src, hasLeads, hasThemes } = await caps(grain, slug, f);
+  if (!src) {
+    return { rows: [], series: [], tot: null, grain, exact: grain === 'page' };
+  }
+  if (!hasThemes && PAGE_ONLY_DIMS.includes(dim)) {
+    throw new Error(
+      'The published data does not carry theme columns yet. Re-run the '
+      + 'workflow so the Parquet export rebuilds with them.');
+  }
+
+  const m = metrics(grain, f.attribution, hasLeads);
+  const w = where(f, grain);
+  const having = minClicks ? `HAVING SUM(clicks) >= ${Number(minClicks) || 0}` : '';
+
+  const all = await run(`
+    SELECT 'g' AS kind, ${dim}::VARCHAR AS k, ${m}
+    FROM ${src} WHERE ${w} AND ${dim} IS NOT NULL
+    GROUP BY k ${having}
+    ORDER BY clicks DESC, impressions DESC
+    ${limit ? `LIMIT ${limit}` : ''}
+  UNION ALL
+    SELECT 's' AS kind, date::VARCHAR AS k, ${m}
+    FROM ${src} WHERE ${w}
+    GROUP BY k`);
+
+  const rows = [], series = [];
+  const tot = { clicks: 0, impressions: 0, leads: 0, conversions: 0, revenue: 0,
+                _posw: 0 };
+  for (const r of all) {
+    if (r.kind === 'g') {
+      rows.push(r);
+      tot.clicks += r.clicks || 0;
+      tot.impressions += r.impressions || 0;
+      tot.leads += r.leads || 0;
+      tot.conversions += r.conversions || 0;
+      tot.revenue += r.revenue || 0;
+      // Position averages by impressions, so re-weight rather than mean it.
+      tot._posw += (r.position || 0) * (r.impressions || 0);
+    } else {
+      series.push({ d: r.k, clicks: r.clicks, impressions: r.impressions });
+    }
+  }
+  series.sort((a, b) => a.d < b.d ? -1 : 1);
+  tot.ctr = tot.impressions ? tot.clicks / tot.impressions : null;
+  tot.position = tot.impressions ? tot._posw / tot.impressions : null;
+  delete tot._posw;
+  if (!hasLeads) { tot.leads = null; tot.conversions = null; tot.revenue = null; }
+
+  return { rows, series, tot, grain, exact: grain === 'page' };
+}
+
+/**
+ * Paid and organic on the same search term.
+ *
+ * `bucket` picks which comparison is being asked for, and they are genuinely
+ * different questions:
+ *   both     ranking AND buying -- possibly paying for a click already earned
+ *   paid     spend with no organic presence -- a content gap
+ *   organic  ranking with no spend -- earned free, and what would be at risk
+ */
+export async function semseo(slug, f, bucket = 'both', limit = 500,
+                             sort = 'sem_cost_inr') {
+  // A term bought with no organic presence belongs to no Search Console
+  // property, so those rows live under their own slug. Asking a product
+  // property for its paid-only terms would otherwise always return nothing,
+  // which reads as "no gaps" when it means "looked in the wrong place".
+  const readSlug = bucket === 'paid' ? 'paid-only' : slug;
+  const files = filesFor('semseo', readSlug, f.from, f.to);
+  if (!files.length) return { rows: [], missing: true, bucket };
+  const src = `read_parquet([${files.map(lit).join(',')}])`;
+
+  const termClause = (() => {
+    const list = (f.query || '').split(',').map(t => t.trim()).filter(Boolean);
+    if (!list.length) return null;
+    const each = f.queryOp === 'exact'
+      ? list.map(t => `lower(term) = ${lit(t.toLowerCase())}`)
+      : list.map(t => `lower(term) LIKE ${lit('%' + t.toLowerCase() + '%')}`);
+    const glue = (f.join === 'all' && f.queryOp !== 'exact') ? ' AND ' : ' OR ';
+    const j = each.join(glue);
+    return f.queryOp === 'not' ? `NOT (${j})` : `(${j})`;
+  })();
+
+  const having = bucket === 'both'
+      ? 'HAVING SUM(seo_impressions) > 0 AND SUM(sem_impressions) > 0'
+    : bucket === 'paid'
+      ? 'HAVING SUM(seo_impressions) = 0 AND SUM(sem_impressions) > 0'
+    : bucket === 'organic'
+      ? 'HAVING SUM(seo_impressions) > 0 AND SUM(sem_impressions) = 0'
+      : '';
+
+  const allowed = ['sem_cost_inr', 'sem_clicks', 'seo_clicks',
+                   'seo_impressions', 'sem_impressions', 'sem_conversions'];
+  const order = allowed.includes(sort) ? sort : 'sem_cost_inr';
+
+  const rows = await run(`
+    SELECT term,
+      SUM(seo_clicks)::BIGINT       AS seo_clicks,
+      SUM(seo_impressions)::BIGINT  AS seo_impressions,
+      SUM(seo_position * seo_impressions) / NULLIF(SUM(seo_impressions),0) AS seo_position,
+      SUM(sem_clicks)::BIGINT       AS sem_clicks,
+      SUM(sem_impressions)::BIGINT  AS sem_impressions,
+      SUM(sem_cost_inr)::DOUBLE     AS sem_cost_inr,
+      SUM(sem_conversions)::DOUBLE  AS sem_conversions
+    FROM ${src}
+    WHERE date BETWEEN DATE ${lit(f.from)} AND DATE ${lit(f.to)}
+      ${termClause ? 'AND ' + termClause : ''}
+    GROUP BY term
+    ${having}
+    ORDER BY ${order} DESC
+    LIMIT ${Number(limit) || 500}`);
+
+  const tot = rows.reduce((a, r) => ({
+    seo_clicks: a.seo_clicks + (r.seo_clicks || 0),
+    sem_clicks: a.sem_clicks + (r.sem_clicks || 0),
+    seo_impressions: a.seo_impressions + (r.seo_impressions || 0),
+    sem_impressions: a.sem_impressions + (r.sem_impressions || 0),
+    sem_cost_inr: a.sem_cost_inr + (r.sem_cost_inr || 0),
+    sem_conversions: a.sem_conversions + (r.sem_conversions || 0),
+  }), {seo_clicks:0, sem_clicks:0, seo_impressions:0, sem_impressions:0,
+       sem_cost_inr:0, sem_conversions:0});
+
+  return { rows, tot, bucket, missing: false };
+}
+
 /** Escape hatch: run arbitrary SQL against the current property's files. */
 export async function raw(sql) { return run(sql); }
 
@@ -373,6 +541,8 @@ export async function trend(slug, f, dim, period, limit = 200) {
     GROUP BY s.${dim}, ${b}
     ORDER BY period`);
 
-  const periods = [...new Set(rows.map(r => r.period))].sort();
+  // Newest first: the column next to the row label should be the most recent
+  // period, because that is the one being read.
+  const periods = [...new Set(rows.map(r => r.period))].sort().reverse();
   return { rows, periods, grain, exact: grain === 'page' };
 }
