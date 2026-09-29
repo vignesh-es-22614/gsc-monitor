@@ -303,11 +303,18 @@ def main() -> None:
 
     # Incremental runs keep the month files they are not rewriting, so the
     # manifest starts from whatever is already published.
+    #
+    # `published` is read unconditionally, not only for incremental runs,
+    # because the manifest indexes every (property, grain) and a run covering
+    # one grain must not erase the others. Exporting semseo alone once wiped
+    # page, query and site from the index while their files sat on disk, and
+    # the dashboard then found no files for any normal tab.
     manifest_path = os.path.join(args.out, "manifest.json")
-    old: dict = {}
-    if args.refresh_days and os.path.exists(manifest_path):
+    published: dict = {}
+    if os.path.exists(manifest_path):
         with open(manifest_path, encoding="utf-8") as fh:
-            old = json.load(fh).get("properties", {})
+            published = json.load(fh).get("properties", {})
+    old: dict = published if args.refresh_days else {}
 
     stale_from = (end - dt.timedelta(days=args.refresh_days - 1)) if args.refresh_days else start
 
@@ -383,6 +390,26 @@ def main() -> None:
             if n:
                 print(f"  {sl:<46} {grain:<6} {n:>10,} rows  {b/1e6:>7.1f} MB  "
                       f"{b/max(n,1):>4.1f} B/row", flush=True)
+
+    # Carry forward every (property, grain) this run did not touch, so a
+    # single-grain or single-property export updates the index instead of
+    # replacing it. Only entries whose files still exist are kept.
+    # Not named `slug`: that would shadow the slug() function for the whole of
+    # main(), and Python then treats every earlier reference to it as a local.
+    carried = 0
+    for pub_slug, grains_pub in published.items():
+        for grain, files in grains_pub.items():
+            if grain in manifest["properties"].get(pub_slug, {}):
+                continue
+            kept = [f for f in files
+                    if os.path.exists(os.path.join(args.out, grain, pub_slug,
+                                                   f"{f['m']}.parquet"))]
+            if kept:
+                manifest["properties"].setdefault(pub_slug, {})[grain] = kept
+                carried += 1
+    if carried:
+        print(f"  carried forward {carried} (property, grain) entries this run "
+              f"did not touch", flush=True)
 
     with open(manifest_path, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, separators=(",", ":"))

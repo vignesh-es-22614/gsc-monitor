@@ -369,16 +369,24 @@ export async function tabData(slug, f, dim, limit = null, minClicks = 0) {
   const w = where(f, grain);
   const having = minClicks ? `HAVING SUM(clicks) >= ${Number(minClicks) || 0}` : '';
 
+  // Each branch is its own subquery. An ORDER BY / LIMIT written directly
+  // before UNION ALL binds to the whole union, not the branch, and is a parse
+  // error here -- the ranking and the row cap have to be applied inside the
+  // grouped half before the two are combined.
   const all = await run(`
-    SELECT 'g' AS kind, ${dim}::VARCHAR AS k, ${m}
-    FROM ${src} WHERE ${w} AND ${dim} IS NOT NULL
-    GROUP BY k ${having}
-    ORDER BY clicks DESC, impressions DESC
-    ${limit ? `LIMIT ${limit}` : ''}
-  UNION ALL
-    SELECT 's' AS kind, date::VARCHAR AS k, ${m}
-    FROM ${src} WHERE ${w}
-    GROUP BY k`);
+    SELECT * FROM (
+      SELECT 'g' AS kind, ${dim}::VARCHAR AS k, ${m}
+      FROM ${src} WHERE ${w} AND ${dim} IS NOT NULL
+      GROUP BY k ${having}
+      ORDER BY clicks DESC, impressions DESC
+      ${limit ? `LIMIT ${limit}` : ''}
+    )
+    UNION ALL
+    SELECT * FROM (
+      SELECT 's' AS kind, date::VARCHAR AS k, ${m}
+      FROM ${src} WHERE ${w}
+      GROUP BY k
+    )`);
 
   const rows = [], series = [];
   const tot = { clicks: 0, impressions: 0, leads: 0, conversions: 0, revenue: 0,
